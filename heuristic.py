@@ -23,8 +23,8 @@ def get_ub(g):
                 if c_len < c_min[0]:
                     c_min = (c_len, (u, v))
 
-        n = c_min[1][0]
-        t = c_min[1][1]
+        n = c_min[1][0]  # u
+        t = c_min[1][1]  # v
 
         tn = set(g.neighbors(t))
         tn.discard(n)
@@ -32,7 +32,7 @@ def get_ub(g):
         od.append(n)
         mg[n] = t
 
-        for v in nn:
+        for v in nn:  # for every neighbour  of u
             if v != t:
                 # Red remains, should edge exist
                 if v in tn and g[n][v]['red']:

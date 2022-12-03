@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import heuristic
-import parser
+import pace_parser
 import sys
+import networkx as nx
+import matplotlib.pyplot as plt
 
 instance = sys.argv[-1]
 print(instance)
 
-g = parser.parse(instance)[0]
-    # g = tools.prime_paley(29)
+g = pace_parser.parse(instance)
+nx.draw(g)
+plt.savefig("graph_visu.png")
+
 
 print(f"{len(g.nodes)} {len(g.edges)}")
 
