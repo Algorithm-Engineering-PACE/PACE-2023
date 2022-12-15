@@ -3,7 +3,11 @@
 
 from sys import maxsize
 
-
+def get_open_neighberhood_without_node(neighbors, node) -> set:
+    u_n = set(neighbors)
+    u_n.discard(node)
+    return u_n
+    
 def get_ub(g):
     od = []
     mg = {}
@@ -19,7 +23,7 @@ def get_ub(g):
 
         for u in g.nodes:
             for v in g.neighbors(u):
-                c_len = len(set(g.neighbors(u)) ^ set(g.neighbors(v)))
+                c_len = len(get_open_neighberhood_without_node(g.neighbors(u), v) ^ get_open_neighberhood_without_node(g.neighbors(v), u))
                 if c_len < c_min[0]:
                     c_min = (c_len, (u, v))
 
