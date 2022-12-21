@@ -24,7 +24,8 @@ def parse(path):
             else:
                 if len(entries) == 2 or (len(entries) == 3 and entries[0].lower().strip() == "e"):
                     try:
-                        g.add_edge(int(entries[-2].strip()), int(entries[-1].strip()))
+                        g.add_edge(int(entries[-2].strip()),
+                                   int(entries[-1].strip()))
                     except ValueError:
                         if entries[0].lower().strip() == "e":
                             g.add_edge(entries[-2].strip(), entries[-1])
