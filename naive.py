@@ -3,6 +3,7 @@ from itertools import combinations
 
 from heuristic import get_ub, get_open_neighberhood_without_node
 
+
 def get_naive(g):
     ub, mg, od = get_ub(g)
     g = g.copy()
@@ -11,8 +12,9 @@ def get_naive(g):
     naive_result = helper(g, ub)
     if naive_result == (-1, {}, []):
         print("upper bound was tight!")
-        return  ub, mg, od
+        return ub, mg, od
     return naive_result
+
 
 def contract(g_in, u, v):
     g = g_in.copy()
@@ -21,7 +23,7 @@ def contract(g_in, u, v):
 
     tn = get_open_neighberhood_without_node(g.neighbors(t), n)
     nn = set(g.neighbors(n))
-    
+
     for v in nn:  # for every neighbour  of u
         if v != t:
             # Red remains, should edge exist
@@ -38,6 +40,7 @@ def contract(g_in, u, v):
     g.remove_node(n)
     return g
 
+
 def get_red_degree(g):
     # Find d for this d-trigraph
     c_max = 0
@@ -51,20 +54,19 @@ def get_red_degree(g):
     return c_max
 
 
-
-
 def helper(g, ub):
     if len(g.nodes) == 1:
         return 0, {}, []
 
     res = []
     g_in = g.copy()
-    for u,v in combinations(g_in.nodes, 2):
+    for u, v in combinations(g_in.nodes, 2):
         g = contract(g_in, u, v)
         c_max = get_red_degree(g)
 
         if c_max >= ub:
-            print(f"Not exploring due to ub the following edge in search tree {u} - {v},{c_max} left nodes: {len(g.nodes)}")
+            print(
+                f"Not exploring due to ub the following edge in search tree {u} - {v},{c_max} left nodes: {len(g.nodes)}")
             continue  # Optimization
 
         d, mg, od = helper(g, ub)
@@ -78,5 +80,3 @@ def helper(g, ub):
         return -1, {}, []
     else:
         return min(res, key=itemgetter(0))
-
- 

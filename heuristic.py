@@ -3,11 +3,13 @@
 
 from sys import maxsize
 
+
 def get_open_neighberhood_without_node(neighbors, node) -> set:
     u_n = set(neighbors)
     u_n.discard(node)
     return u_n
-    
+
+
 def get_ub(g):
     od = []
     mg = {}
@@ -23,7 +25,8 @@ def get_ub(g):
 
         for u in g.nodes:
             for v in g.neighbors(u):
-                c_len = len(get_open_neighberhood_without_node(g.neighbors(u), v) ^ get_open_neighberhood_without_node(g.neighbors(v), u))
+                c_len = len(get_open_neighberhood_without_node(g.neighbors(
+                    u), v) ^ get_open_neighberhood_without_node(g.neighbors(v), u))
                 if c_len < c_min[0]:
                     c_min = (c_len, (u, v))
 
@@ -57,7 +60,7 @@ def get_ub(g):
                     cc += 1
             c_max = max(c_max, cc)
 
-    return c_max, mg, od 
+    return c_max, mg, od
 
 
 def get_ub2(g):
@@ -87,8 +90,10 @@ def get_ub2(g):
         for n1 in g.nodes:
             for n2 in g.nodes:
                 if n2 > n1:
-                    delta = (set(g.neighbors(n1)) ^ set(g.neighbors(n2))) - {n1, n2}
-                    new_test = len(delta)  # len((delta | reds[n1] | reds[n2]) - {n1, n2})
+                    delta = (set(g.neighbors(n1)) ^ set(
+                        g.neighbors(n2))) - {n1, n2}
+                    # len((delta | reds[n1] | reds[n2]) - {n1, n2})
+                    new_test = len(delta)
 
                     # Test if twin
                     if len(delta) == 0:
@@ -167,11 +172,12 @@ def get_ub2_polarity(g):
             for n2 in g.nodes:
                 if n2 > n1:
                     delta = ((set(g.neighbors(n1)) ^ set(g.neighbors(n2))))\
-                            | (set(g.predecessors(n1)) ^ set(g.successors(n2))) \
-                            | (set(g.successors(n1)) ^ set(g.predecessors(n2)))\
-                            - {n1, n2}
+                        | (set(g.predecessors(n1)) ^ set(g.successors(n2))) \
+                        | (set(g.successors(n1)) ^ set(g.predecessors(n2)))\
+                        - {n1, n2}
 
-                    new_test = len(delta)  # len((delta | reds[n1] | reds[n2]) - {n1, n2})
+                    # len((delta | reds[n1] | reds[n2]) - {n1, n2})
+                    new_test = len(delta)
 
                     # Test if twin
                     if len(delta) == 0:
@@ -218,4 +224,3 @@ def get_ub2_polarity(g):
             ub = max(ub, cc)
 
     return ub
-
