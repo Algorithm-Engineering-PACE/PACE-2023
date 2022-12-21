@@ -4,12 +4,15 @@ from itertools import combinations
 from heuristic import get_ub, get_open_neighberhood_without_node
 
 def get_naive(g):
-    ub = get_ub(g)
+    ub, mg, od = get_ub(g)
     g = g.copy()
     for u, v in g.edges:
         g[u][v]['red'] = False
-
-    return helper(g, ub)
+    naive_result = helper(g, ub)
+    if naive_result == (-1, {}, []):
+        print("upper bound was tight!")
+        return  ub, mg, od
+    return naive_result
 
 def contract(g_in, u, v):
     g = g_in.copy()

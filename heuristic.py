@@ -57,7 +57,7 @@ def get_ub(g):
                     cc += 1
             c_max = max(c_max, cc)
 
-    return c_max
+    return c_max, mg, od 
 
 
 def get_ub2(g):
