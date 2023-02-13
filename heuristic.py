@@ -20,8 +20,8 @@ def get_ub(g):
 
     c_max = 0
     while len(g.nodes) > 1:
-        # Pick next node
-        c_min = maxsize, (0, 0)
+        # Pick next node setting default in case of several isolated vertices 
+        c_min = maxsize, (list(g.nodes)[0], list(g.nodes)[1]) 
 
         for u in g.nodes:
             for v in g.neighbors(u):
