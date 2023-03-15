@@ -2,6 +2,7 @@ from enum import Enum
 import networkx as nx
 from collections import Set
 
+## sagemath implementation for graph modular decomposition 
 
 class NodeType(Enum):
     """
@@ -598,13 +599,19 @@ def habib_maurer_algorithm(graph, g_classes=None):
     if graph.number_of_nodes() == 1:
         root = create_normal_node(next(graph.__iter__()))
         return root
-
+    ## if g is not connected :
+    ## 1.create parallel node 
+    ## 2.set node's children to be g connected components (rec)  
     elif not nx.is_connected(graph):
         root = create_parallel_node()
         root.children = [habib_maurer_algorithm(graph.subgraph(component), g_classes)
                          for component in  nx.components.connected_components(graph)]
         return root
-
+    ## if g is connected and g complement is connected :
+    ## 1.create prime node 
+    ## 2.get g modules using gamma_classes (does not contain all edges)
+    ## 3.calc maximal modules of g 
+    ## 4.set node's children to be g.subgraph(maximal module nodes) (rec)  
     g_comp = nx.complement(graph)
     if nx.is_connected(g_comp):
         from collections import defaultdict
@@ -613,7 +620,7 @@ def habib_maurer_algorithm(graph, g_classes=None):
             g_classes = gamma_classes(graph)
         vertex_set = frozenset(graph)
         edges = [tuple(e) for e in g_classes[vertex_set]]
-        sub = graph.edge_subgraph(edges=edges) ## todo check this line
+        sub = graph.edge_subgraph(edges=edges) ## todo: check this line
         d = defaultdict(list)
         for v in sub.nodes:
             for v1 in sub.neighbors(v):
@@ -631,7 +638,9 @@ def habib_maurer_algorithm(graph, g_classes=None):
                      for component in  nx.components.connected_components(g_comp)]
     return root
 
-# Function implemented for testing
+## sagemath tests for graph modular decomposition 
+
+
 def get_module_type(graph):
     """
     Return the module type of the root of the modular decomposition tree of
@@ -653,13 +662,12 @@ def get_module_type(graph):
         sage: get_module_type(g)
         PRIME
     """
-    if not graph.is_connected():
+    if not nx.is_connected(graph):
         return NodeType.PARALLEL
-    elif graph.complement().is_connected():
+    elif nx.is_connected(nx.complement(graph)):
         return NodeType.PRIME
     return NodeType.SERIES
 
-# Function implemented for testing
 def form_module(index, other_index, tree_root, graph):
     r"""
     Forms a module out of the modules in the module pair.
@@ -908,35 +916,115 @@ def either_connected_or_not_connected(v, vertices_in_module, graph):
     # v else all should be disconnected
     return all(graph.has_edge(u, v) == connected for u in vertices_in_module)
 
-
-def test_gamma_modules(trials, vertices, prob, verbose=True):
-    r"""
-    Verify that the vertices of each gamma class of a random graph are modules
-    of that graph.
+def children_node_type(module, node_type):
+    """
+    Check whether the node type of the children of ``module`` is ``node_type``.
     INPUT:
-    - ``trials`` -- the number of trials to run
-    - ``vertices`` -- the size of the graph to use
-    - ``prob`` -- the probability that any given edge is in the graph.
-      See :meth:`~sage.graphs.generators.random.RandomGNP` for more details.
-    - ``verbose`` -- print information on each trial.
+    - ``module`` -- module which is tested
+    - ``node_type`` -- input node_type
     EXAMPLES::
         sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: test_gamma_modules(3, 7, 0.5)
+        sage: g = graphs.OctahedralGraph()
+        sage: tree_root = modular_decomposition(g)
+        sage: print_md_tree(modular_decomposition(g))
+        SERIES
+         PARALLEL
+          0
+          5
+         PARALLEL
+          1
+          4
+         PARALLEL
+          2
+          3
+        sage: children_node_type(tree_root, NodeType.SERIES)
+        False
+        sage: children_node_type(tree_root, NodeType.PARALLEL)
+        True
     """
-    
-    for _ in range(trials):
-        g = nx.random_cograph(vertices)
-       
-        g_classes = gamma_classes(g)
-        for module in g_classes.keys():
-            m_list = list(module)
-            for v in g:
-                if v not in module:
-                    assert(either_connected_or_not_connected(v, m_list, g))
-        if verbose:
-            print("Passes!")
+    return all(node.node_type == node_type for node in module.children)
 
 
+def test_module(module, graph):
+    """
+    Test whether input module is actually a module
+    INPUT:
+    - ``module`` -- module which needs to be tested
+    - ``graph`` -- input sage graph which contains the module
+    OUTPUT:
+    ``True`` if input module is a module by definition else ``False``
+    EXAMPLES::
+        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
+        sage: g = graphs.HexahedralGraph()
+        sage: tree_root = modular_decomposition(g)
+        sage: test_module(tree_root, g)
+        True
+        sage: test_module(tree_root.children[0], g)
+        True
+    """
+    # A single vertex is a module
+    if module.node_type == NodeType.NORMAL:
+        return True
+
+    # vertices contained in module
+    vertices_in_module = get_vertices(module)
+
+    # vertices outside module
+    vertices_outside = list(set(graph.nodes) - set(vertices_in_module))
+
+    # Nested module with only one child
+    if module.node_type != NodeType.NORMAL and len(module.children) == 1:
+        return False
+
+    # If children of SERIES module are all SERIES modules
+    if module.node_type == NodeType.SERIES:
+        if children_node_type(module, NodeType.SERIES):
+            return False
+
+    # If children of PARALLEL module are all PARALLEL modules
+    if module.node_type == NodeType.PARALLEL:
+        if children_node_type(module, NodeType.PARALLEL):
+            return False
+
+    # check the module by definition. Vertices in a module should all either
+    # be connected or disconnected to any vertex outside module
+    for v in vertices_outside:
+        if not either_connected_or_not_connected(v, vertices_in_module, graph):
+            return False
+    return True
+
+def test_modular_decomposition(tree_root, graph):
+    """
+    Test the input modular decomposition tree using recursion.
+    INPUT:
+    - ``tree_root`` -- root of the modular decomposition tree to be tested
+    - ``graph`` -- graph whose modular decomposition tree needs to be tested
+    OUTPUT:
+    ``True`` if input tree is a modular decomposition else ``False``
+    EXAMPLES::
+        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
+        sage: g = graphs.HexahedralGraph()
+        sage: test_modular_decomposition(modular_decomposition(g), g)
+        True
+    """
+    if tree_root.node_type != NodeType.NORMAL:
+        for module in tree_root.children:
+            if not test_module(module, graph):
+                # test whether modules pass the defining
+                # characteristics of modules
+                return False
+            if not test_modular_decomposition(module,
+                                              graph.subgraph(get_vertices(module))):
+                # recursively test the modular decomposition subtrees
+                return False
+
+        if not test_maximal_modules(tree_root, graph):
+            # test whether the mdoules are maximal in nature
+            return False
+
+    return True
+
+## my functions
 
 import pace_parser
 from naive import get_naive
@@ -951,8 +1039,8 @@ from shutil import copyfile
 
 BASE_PATH = Path(__file__).parent
 
-def is_prime(g):
-    return nx.is_connected(g) and nx.is_connected(nx.complement(g))
+def is_prime(md_tree,graph):
+    return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
 
 
 def check_and_copy_relevant_graphs(instances_dir_path,output_dir_path):
@@ -961,33 +1049,170 @@ def check_and_copy_relevant_graphs(instances_dir_path,output_dir_path):
         files = sorted(os.listdir(instances_dir_path))
         for file_name in files:
             if "gr" in file_name:
-                output_file_name = (output_dir_path / file_name).resolve().as_posix()
                 input_file_name = (instances_dir_path / file_name).resolve().as_posix()
-                g = pace_parser.parse(input_file_name)
-                if not is_prime(g):
+                output_file_name = (output_dir_path / file_name).resolve().as_posix()
+                graph = pace_parser.parse(input_file_name)
+                md_tree = habib_maurer_algorithm(graph)
+                if not is_prime(md_tree,graph):
                     copyfile(input_file_name, output_file_name)
+                    pre_output_file_name = (output_dir_path / f"pre_{file_name}").resolve().as_posix().replace("gr","gexf")
+                    decomposed_graph = create_graph_from_dm_tree(md_tree,graph)
+                    nx.write_gexf(decomposed_graph,pre_output_file_name)
         
+
+    
+ 
+def create_graph_from_dm_tree(root,graph):
+    decomposed_graph = nx.Graph()
+    maximal_modules = {frozenset(get_vertices(child)) for child in root.children}
+    maximal_modules_mapping = {}
+    ## map each vertex v to a module - where module contains v 
+    for child in maximal_modules:
+        for v in child:
+            maximal_modules_mapping[v] = child
+        
+    for child in maximal_modules:
+        ## from the defintion of a module we only need one vertex from a module 
+        ## a module is non empty set  
+        v = list(child)[0]
+        mutal_adj = set(graph.neighbors(v)) - child
+        for i in mutal_adj:
+            decomposed_graph.add_edge(child,maximal_modules_mapping[i])
+    
+    return decomposed_graph
+
+
+## my tests 
+from naive import get_naive
+
+def save_graph_to_png(graph,file_name):
+    nx.draw_networkx(graph)
+    plt.savefig(f"{file_name.split('.')[0]+'before'}.png")
+    plt.close()
+
+
+def run_test(graph,file_name=None):
+    #save_graph_to_png(graph)
+    md_tree = habib_maurer_algorithm(graph)
+    if is_prime(md_tree,graph):
+        print("graph is not relevant for preprocessing")
+        return {"file_name": file_name
+            ,"is_relevant": 0
+            #,"g_tww": tww_g[0] 
+            #,"g_duration_s" : delta_g
+            ,"decomposed_g_tww": -1
+            ,"decomposed_g_duration_s" : -1
+            ,"created_at": datetime.now()}
+    decomposed_graph = create_graph_from_dm_tree(md_tree,graph)
+    #save_graph_to_png(decomposed_graph)
+    result = compare_and_report_tww(graph,decomposed_graph,file_name)
+    return result
+
+
+
+
+from timeit import default_timer as timer
+from datetime import datetime
+def compare_and_report_tww(graph,decomposed_graph,file_name):
+    #start_g = timer()
+    #tww_g = get_naive(graph)
+    #end_g = timer()
+    #delta_g = end_g - start_g
+    #print(f"g tww ={tww_g[0]} total_time {delta_g}\n")
+    start_g_d = timer()
+    tww_decomposed_g = get_naive(decomposed_graph)
+    end_g_d = timer()
+    delta_g_d = end_g_d - start_g_d
+    print(f"decomposed g tww ={tww_decomposed_g[0]} total_time {delta_g_d}\n")
+    return {"file_name": file_name
+            ,"is_relevant": 1
+            #,"g_tww": tww_g[0] 
+            #,"g_duration_s" : delta_g
+            ,"decomposed_g_tww": tww_decomposed_g[0] 
+            ,"decomposed_g_duration_s" : round(delta_g_d,2)
+            ,"created_at": datetime.now()}
+
+def run_test_on_wiki_graph():
+    adj_list = {1:[2,3,4], 2:[1,4,5,6,7], 3:[1,4,5,6,7], 4:[1,2,3,5,6,7],
+             5:[2,3,4,6,7], 6:[2,3,4,5,8,9,10,11],
+               7:[2,3,4,5,8,9,10,11], 8:[6,7,9,10,11], 9:[6,7,8,10,11],
+               10:[6,7,8,9], 11:[6,7,8,9]}
+    g = nx.from_dict_of_lists(adj_list)
+    start_g = timer()
+    tww_g = get_naive(g)
+    end_g = timer()
+    delta_g = end_g - start_g
+    print(f"g tww ={tww_g[0]} total_time {delta_g}\n")
+    nx.draw_networkx(g)
+    plt.show()
+    plt.close()
+    print(is_prime(g))
+    md_tree = habib_maurer_algorithm(g)
+    print_md_tree(md_tree)
+    decomposed_graph = create_graph_from_dm_tree(md_tree,g)
+    start_g_d = timer()
+    tww_decomposed_g = get_naive(decomposed_graph)
+    end_g_d = timer()
+    delta_g_d = end_g_d - start_g_d
+    print(f"decomposed g tww ={tww_decomposed_g[0]} total_time {delta_g_d}\n")
+    nx.draw_networkx(decomposed_graph)
+    plt.show()
+
+    return
+    
+    
+def run_test_on_icosahedral_graph():
+    g = nx.generators.icosahedral_graph()
+    md_tree = habib_maurer_algorithm(g)
+    print_md_tree(md_tree)
+    decomposed_graph = create_graph_from_dm_tree(md_tree,g)
+  
+
+def run_tests_on_data_set(dataset_folder_name):
+    #INSTANCES_PATH = (BASE_PATH / "exact-public").resolve() 
+    from pandas import DataFrame
+
+    RELEVANT_INSTATNCE_PATH = (BASE_PATH / dataset_folder_name).resolve()
+    
+    files = sorted(os.listdir(RELEVANT_INSTATNCE_PATH))
+    filtered_files = filter(lambda file_name: "gr" in file_name, files)
+
+    for index,file_name in enumerate(filtered_files):
+            
+        row = {}
+        print(f"test start running {file_name}")
+        row["file_name"] = file_name
+        instance_path = (RELEVANT_INSTATNCE_PATH / file_name).resolve().as_posix()
+        graph = pace_parser.parse(instance_path)
+        result_df = DataFrame().from_records([run_test(graph,file_name)])
+        if index == 0:
+            result_df.to_csv(f"{dataset_folder_name}_pre_results.csv"
+                             ,mode='a')
+        else:
+            result_df.to_csv(f"{dataset_folder_name}_pre_results.csv"
+                             ,index=False
+                             ,header=False
+                             ,mode='a')
+        
+           
+    
+        
+    #result_df.to_csv(f"{DATASET_FOLDER_NAME}.csv")
+    
+         
+
 
 INSTANCES_PATH = (BASE_PATH / "exact-public").resolve() 
 OUTPUT_PATH = (BASE_PATH / "relevant-preprocessing").resolve() 
 
+# check_and_copy_relevant_graphs(INSTANCES_PATH,OUTPUT_PATH)
+# DATASET_FOLDER_NAME = "tiny-set"
+DATASET_FOLDER_NAME = "exact-public"
+DATASET_FOLDER_NAME_OUTPUT = "relevant-preprocessing"
+#
 check_and_copy_relevant_graphs(INSTANCES_PATH,OUTPUT_PATH)
-
-
-files = sorted(os.listdir(OUTPUT_PATH))
-for file_name in files:
-    print(file_name+' STARTED \n') 
-    instance_path = (INSTANCES_PATH / file_name).resolve().as_posix()
-    g = pace_parser.parse(instance_path)
-    md_tree = habib_maurer_algorithm(g)
-    #nx.draw_networkx(g)
-    #plt.show()
-    #print_md_tree(md_tree)
-    #g_tag = md_tree_to_graph(md_tree)
-    print(test_maximal_modules(md_tree,g))
-    #if nx.is_isomorphic(g,g_tag):
-        #print(file_name+'IS ISO \n') 
-    #print(nx.is_isomorphic(g,g_tag))
-
-   
+#run_tests_on_data_set(DATASET_FOLDER_NAME)
+#run_test_on_wiki_graph()
+#run_test_on_icosahedral_graph()
+#print(1)
 
