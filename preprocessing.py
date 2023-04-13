@@ -881,7 +881,6 @@ def md_tree_to_graph(root):
     graph.add_nodes_from(vs)
     return graph
 
-
 def either_connected_or_not_connected(v, vertices_in_module, graph):
     """
     Check whether ``v`` is connected or disconnected to all vertices in the
@@ -1037,30 +1036,11 @@ import os
 from shutil import copyfile
 
 
-BASE_PATH = Path(__file__).parent
 
 def is_prime(md_tree,graph):
     return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
 
 
-def check_and_copy_relevant_graphs(instances_dir_path,output_dir_path):
-    if not os.path.exists(output_dir_path):
-        os.makedirs(output_dir_path)
-        files = sorted(os.listdir(instances_dir_path))
-        for file_name in files:
-            if "gr" in file_name:
-                input_file_name = (instances_dir_path / file_name).resolve().as_posix()
-                output_file_name = (output_dir_path / file_name).resolve().as_posix()
-                graph = pace_parser.parse(input_file_name)
-                md_tree = habib_maurer_algorithm(graph)
-                if not is_prime(md_tree,graph):
-                    copyfile(input_file_name, output_file_name)
-                    pre_output_file_name = (output_dir_path / f"pre_{file_name}").resolve().as_posix().replace("gr","gexf")
-                    decomposed_graph = create_graph_from_dm_tree(md_tree,graph)
-                    nx.write_gexf(decomposed_graph,pre_output_file_name)
-        
-
-    
  
 def create_graph_from_dm_tree(root,graph):
     decomposed_graph = nx.Graph()
@@ -1082,55 +1062,6 @@ def create_graph_from_dm_tree(root,graph):
     return decomposed_graph
 
 
-## my tests 
-from naive import get_naive
-
-def save_graph_to_png(graph,file_name):
-    nx.draw_networkx(graph)
-    plt.savefig(f"{file_name.split('.')[0]+'before'}.png")
-    plt.close()
-
-
-def run_test(graph,file_name=None):
-    #save_graph_to_png(graph)
-    md_tree = habib_maurer_algorithm(graph)
-    if is_prime(md_tree,graph):
-        print("graph is not relevant for preprocessing")
-        return {"file_name": file_name
-            ,"is_relevant": 0
-            #,"g_tww": tww_g[0] 
-            #,"g_duration_s" : delta_g
-            ,"decomposed_g_tww": -1
-            ,"decomposed_g_duration_s" : -1
-            ,"created_at": datetime.now()}
-    decomposed_graph = create_graph_from_dm_tree(md_tree,graph)
-    #save_graph_to_png(decomposed_graph)
-    result = compare_and_report_tww(graph,decomposed_graph,file_name)
-    return result
-
-
-
-
-from timeit import default_timer as timer
-from datetime import datetime
-def compare_and_report_tww(graph,decomposed_graph,file_name):
-    #start_g = timer()
-    #tww_g = get_naive(graph)
-    #end_g = timer()
-    #delta_g = end_g - start_g
-    #print(f"g tww ={tww_g[0]} total_time {delta_g}\n")
-    start_g_d = timer()
-    tww_decomposed_g = get_naive(decomposed_graph)
-    end_g_d = timer()
-    delta_g_d = end_g_d - start_g_d
-    print(f"decomposed g tww ={tww_decomposed_g[0]} total_time {delta_g_d}\n")
-    return {"file_name": file_name
-            ,"is_relevant": 1
-            #,"g_tww": tww_g[0] 
-            #,"g_duration_s" : delta_g
-            ,"decomposed_g_tww": tww_decomposed_g[0] 
-            ,"decomposed_g_duration_s" : round(delta_g_d,2)
-            ,"created_at": datetime.now()}
 
 def run_test_on_wiki_graph():
     adj_list = {1:[2,3,4], 2:[1,4,5,6,7], 3:[1,4,5,6,7], 4:[1,2,3,5,6,7],
@@ -1138,81 +1069,126 @@ def run_test_on_wiki_graph():
                7:[2,3,4,5,8,9,10,11], 8:[6,7,9,10,11], 9:[6,7,8,10,11],
                10:[6,7,8,9], 11:[6,7,8,9]}
     g = nx.from_dict_of_lists(adj_list)
-    start_g = timer()
-    tww_g = get_naive(g)
-    end_g = timer()
-    delta_g = end_g - start_g
-    print(f"g tww ={tww_g[0]} total_time {delta_g}\n")
-    nx.draw_networkx(g)
-    plt.show()
-    plt.close()
-    print(is_prime(g))
     md_tree = habib_maurer_algorithm(g)
-    print_md_tree(md_tree)
-    decomposed_graph = create_graph_from_dm_tree(md_tree,g)
-    start_g_d = timer()
-    tww_decomposed_g = get_naive(decomposed_graph)
-    end_g_d = timer()
-    delta_g_d = end_g_d - start_g_d
-    print(f"decomposed g tww ={tww_decomposed_g[0]} total_time {delta_g_d}\n")
-    nx.draw_networkx(decomposed_graph)
-    plt.show()
+    p_set = prime_g(md_tree,g)
+    preprocessed_graph = create_graph_from_prime_g(md_tree,g)
 
-    return
-    
+   
     
 def run_test_on_icosahedral_graph():
     g = nx.generators.icosahedral_graph()
     md_tree = habib_maurer_algorithm(g)
-    print_md_tree(md_tree)
-    decomposed_graph = create_graph_from_dm_tree(md_tree,g)
+    preprocessed_graph = create_graph_from_prime_g(md_tree,g)
   
 
-def run_tests_on_data_set(dataset_folder_name):
-    #INSTANCES_PATH = (BASE_PATH / "exact-public").resolve() 
-    from pandas import DataFrame
-
-    RELEVANT_INSTATNCE_PATH = (BASE_PATH / dataset_folder_name).resolve()
+def quotient_graph(root,g):
+    #quotient_g = nx.Graph()
+    maximal_modules = {frozenset(get_vertices(child)) for child in root.children}
+    vertices = []
+    for module in maximal_modules:
+        vertices.append(list(module)[0])
+    quotient_g = g.subgraph(vertices)
+    # nx.draw_networkx(quotient_g)
+    # plt.show()
+    return quotient_g
     
-    files = sorted(os.listdir(RELEVANT_INSTATNCE_PATH))
-    filtered_files = filter(lambda file_name: "gr" in file_name, files)
+    
 
-    for index,file_name in enumerate(filtered_files):
+    
+def prime_g_helper(root,graph,prime_g_set):
+    if root.node_type == NodeType.NORMAL:
+        return
+    elif root.node_type == NodeType.SERIES or root.node_type == NodeType.PARALLEL:
+         for connected_component in root.children:
+            prime_g_helper(connected_component,graph,prime_g_set)
+    
+    elif root.node_type == NodeType.PRIME:
+        prime_g_set.append(quotient_graph(root,graph))
+        for maximal_module in root.children:
+            if len(maximal_module.children) > 1:
+                module_vertices = get_vertices(maximal_module)
+                g_m = graph.subgraph(module_vertices)
+                prime_g_helper(maximal_module,g_m,prime_g_set)
+
             
-        row = {}
-        print(f"test start running {file_name}")
-        row["file_name"] = file_name
-        instance_path = (RELEVANT_INSTATNCE_PATH / file_name).resolve().as_posix()
-        graph = pace_parser.parse(instance_path)
-        result_df = DataFrame().from_records([run_test(graph,file_name)])
-        if index == 0:
-            result_df.to_csv(f"{dataset_folder_name}_pre_results.csv"
-                             ,mode='a')
-        else:
-            result_df.to_csv(f"{dataset_folder_name}_pre_results.csv"
-                             ,index=False
-                             ,header=False
-                             ,mode='a')
-        
-           
-    
-        
-    #result_df.to_csv(f"{DATASET_FOLDER_NAME}.csv")
-    
-         
+def prime_g(root,graph):
+    prime_g_set = []
+    prime_g_helper(root,graph,prime_g_set)
+    return prime_g_set
+            
+
+def create_graph_from_prime_g(md_tree,graph):
+    prime_g_set = prime_g(md_tree,graph)
+    preprocessed_graph = nx.Graph()
+    for subgraph in prime_g_set:
+        preprocessed_graph = nx.union(preprocessed_graph,subgraph)
+    return preprocessed_graph
+
+ 
+BASE_PATH = Path(__file__).parent
 
 
 INSTANCES_PATH = (BASE_PATH / "exact-public").resolve() 
-OUTPUT_PATH = (BASE_PATH / "relevant-preprocessing").resolve() 
+RELEVENT_FOR_PREPROCESSING_PATH = (BASE_PATH / "relevant-preprocessing").resolve() 
+PREPROCESSED_GRAPH_OUTPUT = (BASE_PATH / "preprocessed_graphs").resolve() 
+PREPROCESSING_BEFORE_AFTER_PATH = (BASE_PATH / "preprocessing_before_after").resolve() 
 
-# check_and_copy_relevant_graphs(INSTANCES_PATH,OUTPUT_PATH)
-# DATASET_FOLDER_NAME = "tiny-set"
 DATASET_FOLDER_NAME = "exact-public"
 DATASET_FOLDER_NAME_OUTPUT = "relevant-preprocessing"
-#
-check_and_copy_relevant_graphs(INSTANCES_PATH,OUTPUT_PATH)
-#run_tests_on_data_set(DATASET_FOLDER_NAME)
-#run_test_on_wiki_graph()
-#run_test_on_icosahedral_graph()
-#print(1)
 
+def twin_merge(g):
+    changed = True
+    while changed:
+        changed = False
+        nodes = sorted(list(g.nodes))
+        for n1 in nodes:
+            nb1 = set(g.neighbors(n1))
+            for n2 in nodes:
+                if n1 < n2:
+                    nb2 = set(g.neighbors(n2))
+                    nbs = nb1 ^ nb2
+                    nbs.discard(n1)
+                    nbs.discard(n2)
+                    if len(nbs) == 0:
+                        g.remove_node(n1)
+                        changed = True
+                        break
+    return g
+
+def main():
+    is_relevant_preprocessing = True
+    if not os.path.exists(RELEVENT_FOR_PREPROCESSING_PATH):
+        os.makedirs(RELEVENT_FOR_PREPROCESSING_PATH)
+        is_relevant_preprocessing = False
+    instances_path = RELEVENT_FOR_PREPROCESSING_PATH if is_relevant_preprocessing else INSTANCES_PATH 
+    files = sorted(os.listdir(instances_path))
+    if not os.path.exists(PREPROCESSED_GRAPH_OUTPUT):
+        os.makedirs(PREPROCESSED_GRAPH_OUTPUT)
+    if not os.path.exists(PREPROCESSING_BEFORE_AFTER_PATH):
+        os.makedirs(PREPROCESSING_BEFORE_AFTER_PATH)
+    for file_name in files:
+        if "gr" in file_name:
+            input_file_name = (instances_path / file_name).resolve().as_posix()
+            output_file_name = (RELEVENT_FOR_PREPROCESSING_PATH / file_name).resolve().as_posix()
+            graph = pace_parser.parse(input_file_name)
+            graph = twin_merge(graph)
+            md_tree = habib_maurer_algorithm(graph)
+            if not is_prime(md_tree,graph):
+                if not is_relevant_preprocessing:
+                    copyfile(input_file_name, output_file_name)
+                preprocessed_graph_path = (PREPROCESSED_GRAPH_OUTPUT / f"preprocessed_{file_name}").resolve().as_posix()
+                preprocessed_graph = create_graph_from_prime_g(md_tree,graph)
+                nx.write_gexf(preprocessed_graph,preprocessed_graph_path)
+                file_name_new = f"{str(file_name).split('.')[0]}"
+                nx.draw_networkx(graph,with_labels = True)
+                before_file_name_path = (PREPROCESSING_BEFORE_AFTER_PATH / f"{file_name_new}_before.png").resolve().as_posix()
+                plt.savefig(before_file_name_path)
+                plt.clf()
+                nx.draw_networkx(preprocessed_graph,with_labels = True)
+                after_file_name_path = (PREPROCESSING_BEFORE_AFTER_PATH / f"{file_name_new}_after.png").resolve().as_posix()
+                plt.savefig(after_file_name_path)
+                plt.clf()
+                
+            
+
+main()
