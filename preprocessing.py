@@ -1026,7 +1026,6 @@ def test_modular_decomposition(tree_root, graph):
 ## my functions
 
 import pace_parser
-from naive import get_naive
 import networkx as nx
 import matplotlib.pyplot as plt
 from tools import prime_paley
@@ -1034,6 +1033,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import os
 from shutil import copyfile
+from pandas import DataFrame
 
 
 
@@ -1136,26 +1136,8 @@ PREPROCESSING_BEFORE_AFTER_PATH = (BASE_PATH / "preprocessing_before_after").res
 DATASET_FOLDER_NAME = "exact-public"
 DATASET_FOLDER_NAME_OUTPUT = "relevant-preprocessing"
 
-def twin_merge(g):
-    changed = True
-    while changed:
-        changed = False
-        nodes = sorted(list(g.nodes))
-        for n1 in nodes:
-            nb1 = set(g.neighbors(n1))
-            for n2 in nodes:
-                if n1 < n2:
-                    nb2 = set(g.neighbors(n2))
-                    nbs = nb1 ^ nb2
-                    nbs.discard(n1)
-                    nbs.discard(n2)
-                    if len(nbs) == 0:
-                        g.remove_node(n1)
-                        changed = True
-                        break
-    return g
-
 def main():
+    results = []
     is_relevant_preprocessing = True
     if not os.path.exists(RELEVENT_FOR_PREPROCESSING_PATH):
         os.makedirs(RELEVENT_FOR_PREPROCESSING_PATH)
@@ -1171,7 +1153,8 @@ def main():
             input_file_name = (instances_path / file_name).resolve().as_posix()
             output_file_name = (RELEVENT_FOR_PREPROCESSING_PATH / file_name).resolve().as_posix()
             graph = pace_parser.parse(input_file_name)
-            graph = twin_merge(graph)
+            nodes_original_graph = graph.number_of_nodes()
+            edges_original_graph = graph.number_of_edges()
             md_tree = habib_maurer_algorithm(graph)
             if not is_prime(md_tree,graph):
                 if not is_relevant_preprocessing:
@@ -1179,16 +1162,19 @@ def main():
                 preprocessed_graph_path = (PREPROCESSED_GRAPH_OUTPUT / f"preprocessed_{file_name}").resolve().as_posix()
                 preprocessed_graph = create_graph_from_prime_g(md_tree,graph)
                 nx.write_gexf(preprocessed_graph,preprocessed_graph_path)
-                file_name_new = f"{str(file_name).split('.')[0]}"
-                nx.draw_networkx(graph,with_labels = True)
-                before_file_name_path = (PREPROCESSING_BEFORE_AFTER_PATH / f"{file_name_new}_before.png").resolve().as_posix()
-                plt.savefig(before_file_name_path)
-                plt.clf()
-                nx.draw_networkx(preprocessed_graph,with_labels = True)
-                after_file_name_path = (PREPROCESSING_BEFORE_AFTER_PATH / f"{file_name_new}_after.png").resolve().as_posix()
-                plt.savefig(after_file_name_path)
-                plt.clf()
+                nodes_preprocessed_graph = preprocessed_graph.number_of_nodes()
+                edges_preprocessed_graph = preprocessed_graph.number_of_edges()
+                results.append({"file_name": file_name
+                                ,"nodes_original_graph": nodes_original_graph
+                                ,"edges_original_graph": edges_original_graph
+                                ,"nodes_preprocessed_graph": nodes_preprocessed_graph
+                                ,"edges_preprocessed_graph": edges_preprocessed_graph
+                               })
                 
-            
+    df =  DataFrame().from_records(results)
+    df.to_csv("results_1.csv")    
+
+  
+### example - 2,1001,15001,1
 
 main()
