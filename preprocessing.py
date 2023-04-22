@@ -1177,7 +1177,7 @@ def main():
   
 ### example - 2,1001,15001,1
 
-main()
+## main()
 
 def preproccess(graph):
     output_graph = graph 
