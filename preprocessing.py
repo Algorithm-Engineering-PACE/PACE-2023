@@ -1178,3 +1178,10 @@ def main():
 ### example - 2,1001,15001,1
 
 main()
+
+def preproccess(graph):
+    output_graph = graph 
+    md_tree = habib_maurer_algorithm(graph)
+    if not is_prime(md_tree,graph):
+        output_graph = create_graph_from_prime_g(md_tree,graph)  
+    return output_graph
