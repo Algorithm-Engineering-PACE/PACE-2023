@@ -1,6 +1,6 @@
 from enum import Enum
 import networkx as nx
-from collections import Set
+
 
 ## sagemath implementation for graph modular decomposition 
 
@@ -11,15 +11,15 @@ class NodeType(Enum):
 
     The various node types defined are
 
-    - ``PARALLEL`` -- indicates the node is a parallel module
+    - ``PARALLEL`` -- indicates the node is a parallel module (G is not connected)
 
-    - ``SERIES`` -- indicates the node is a series module
+    - ``SERIES`` -- indicates the node is a series module (G complement is not connected)
 
-    - ``PRIME`` -- indicates the node is a prime module
+    - ``PRIME`` -- indicates the node is a prime module (G and G complement is connected)
 
-    - ``FOREST`` -- indicates a forest containing trees
+    - ``FOREST`` -- indicates a forest containing trees 
 
-    - ``NORMAL`` -- indicates the node is normal containing a vertex
+    - ``NORMAL`` -- indicates the node is normal containing a vertex 
     """
     PRIME = 0
     SERIES = 1
@@ -638,144 +638,14 @@ def habib_maurer_algorithm(graph, g_classes=None):
                      for component in  nx.components.connected_components(g_comp)]
     return root
 
-## sagemath tests for graph modular decomposition 
 
+## my functions
 
-def get_module_type(graph):
-    """
-    Return the module type of the root of the modular decomposition tree of
-    ``graph``.
-
-    INPUT:
-
-    - ``graph`` -- input sage graph
-
-    OUTPUT:
-
-    ``PRIME`` if graph is PRIME, ``PARALLEL`` if graph is PARALLEL and
-    ``SERIES`` if graph is of type SERIES
-
-    EXAMPLES::
-
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import get_module_type
-        sage: g = graphs.HexahedralGraph()
-        sage: get_module_type(g)
-        PRIME
-    """
-    if not nx.is_connected(graph):
-        return NodeType.PARALLEL
-    elif nx.is_connected(nx.complement(graph)):
-        return NodeType.PRIME
-    return NodeType.SERIES
-
-def form_module(index, other_index, tree_root, graph):
-    r"""
-    Forms a module out of the modules in the module pair.
-
-    Let `M_1` and `M_2` be the input modules. Let `V` be the set of vertices in
-    these modules. Suppose `x` is a neighbor of subset of the vertices in `V`
-    but not all the vertices and `x` does not belong to `V`. Then the set of
-    modules also include the module which contains `x`. This process is repeated
-    until a module is formed and the formed module if subset of `V` is returned.
-
-    INPUT:
-
-    - ``index`` -- first module in the module pair
-
-    - ``other_index`` -- second module in the module pair
-
-    - ``tree_root`` -- modular decomposition tree which contains the modules
-      in the module pair
-
-    - ``graph`` -- graph whose modular decomposition tree is created
-
-    OUTPUT:
-
-    ``[module_formed, vertices]`` where ``module_formed`` is ``True`` if
-    module is formed else ``False`` and ``vertices`` is a list of vertices
-    included in the formed module
-
-    EXAMPLES::
-
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: g = graphs.HexahedralGraph()
-        sage: tree_root = modular_decomposition(g)
-        sage: form_module(0, 2, tree_root, g)
-        [False, {0, 1, 2, 3, 4, 5, 6, 7}]
-    """
-    vertices = set(get_vertices(tree_root.children[index]))
-    vertices.update(get_vertices(tree_root.children[other_index]))
-
-    # stores all neighbors which are common for all vertices in V
-    common_neighbors = set()
-
-    # stores all neighbors of vertices in V which are outside V
-    all_neighbors = set()
-
-    while True:
-        # remove vertices from all_neighbors and common_neighbors
-        all_neighbors.difference_update(vertices)
-        common_neighbors.difference_update(vertices)
-
-        for v in vertices:
-            # stores the neighbors of v which are outside the set of vertices
-            neighbor_list = set(graph.neighbors(v))
-            neighbor_list.difference_update(vertices)
-
-            # update all_neighbors and common_neighbors using the
-            # neighbor_list
-            all_neighbors.update(neighbor_list)
-            common_neighbors.intersection_update(neighbor_list)
-
-        if all_neighbors == common_neighbors:  # indicates a module is formed
-
-            # module formed covers the entire graph
-            if len(vertices) == graph.order():
-                return [False, vertices]
-
-            return [True, vertices]
-
-        # add modules containing uncommon neighbors into the formed module
-        for v in (all_neighbors - common_neighbors):
-            for index in range(len(tree_root.children)):
-                if v in get_vertices(tree_root.children[index]):
-                    vertices.update(get_vertices(tree_root.children[index]))
-                    break
 
 def get_vertices(component_root):
-    """
-    Compute the list of vertices in the (co)component
-
-    INPUT:
-
-    - ``component_root`` -- root of the (co)component whose vertices need to be
-      returned as a list
-
-    OUTPUT:
-
-    list of vertices in the (co)component
-
-    EXAMPLES::
-
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: forest = Node(NodeType.FOREST)
-        sage: forest.children = [create_normal_node(2),
-        ....:                    create_normal_node(3), create_normal_node(1)]
-        sage: series_node = Node(NodeType.SERIES)
-        sage: series_node.children = [create_normal_node(4),
-        ....:                         create_normal_node(5)]
-        sage: parallel_node = Node(NodeType.PARALLEL)
-        sage: parallel_node.children = [create_normal_node(6),
-        ....:                           create_normal_node(7)]
-        sage: forest.children.insert(1, series_node)
-        sage: forest.children.insert(3, parallel_node)
-        sage: get_vertices(forest)
-        [2, 4, 5, 3, 6, 7, 1]
-    """
+    
     vertices = []
 
-    # inner recursive function to recurse over the elements in the
-    # ``component``
     def recurse_component(node, vertices):
         if node.node_type == NodeType.NORMAL:
             vertices.append(node.children[0])
@@ -786,7 +656,7 @@ def get_vertices(component_root):
     recurse_component(component_root, vertices)
     return vertices
 
-def test_maximal_modules(tree_root, graph):
+
     r"""
     Test the maximal nature of modules in a modular decomposition tree.
 
@@ -837,162 +707,7 @@ def test_maximal_modules(tree_root, graph):
                     return False
     return True
 
-def md_tree_to_graph(root):
-    r"""
-    Create a graph having the given MD tree.
-    For the prime nodes we use that every path of length 4 or more is prime.
-    TODO: accept a function that generates prime graphs as a parameter and
-    use that in the prime nodes.
-    EXAMPLES::
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: tup1 = (NodeType.PRIME, 1, (NodeType.SERIES, 2, 3),
-        ....:        (NodeType.PARALLEL, 4, 5), 6)
-        sage: tree1 = nested_tuple_to_tree(tup1)
-        sage: g1 = md_tree_to_graph(tree1)
-        sage: g2 = Graph({1: [2, 3], 2: [1, 3, 4, 5], 3: [1, 2, 4, 5],
-        ....:             4: [2, 3, 6], 5: [2, 3, 6], 6: [4, 5]})
-        sage: g1.is_isomorphic(g2)
-        True
-    """
-    from itertools import product, combinations
 
-    def tree_to_vertices_and_edges(root):
-        r"""
-        Give the list of vertices and edges of the graph having the given md tree.
-        """
-        if root.node_type == NodeType.NORMAL:
-            return (root.children, [])
-        children_ve = [tree_to_vertices_and_edges(child) for child in root.children]
-        vertices = [v for vs, es in children_ve for v in vs]
-        edges = [e for vs, es in children_ve for e in es]
-        vertex_lists = [vs for vs, es in children_ve]
-        if root.node_type == NodeType.PRIME:
-            for vs1, vs2 in zip(vertex_lists, vertex_lists[1:]):
-                for v1, v2 in product(vs1, vs2):
-                    edges.append((v1, v2))
-        elif root.node_type == NodeType.SERIES:
-            for vs1, vs2 in combinations(vertex_lists, 2):
-                for v1, v2 in product(vs1, vs2):
-                    edges.append((v1, v2))
-        return (vertices, edges)
-
-    vs, es = tree_to_vertices_and_edges(root)
-    graph = nx.from_edgelist(es)
-    graph.add_nodes_from(vs)
-    return graph
-
-def either_connected_or_not_connected(v, vertices_in_module, graph):
-    """
-    Check whether ``v`` is connected or disconnected to all vertices in the
-    module.
-    INPUT:
-    - ``v`` -- vertex tested
-    - ``vertices_in_module`` -- list containing vertices in the module
-    - ``graph`` -- graph to which the vertices belong
-    EXAMPLES::
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: g = graphs.OctahedralGraph()
-        sage: print_md_tree(modular_decomposition(g))
-        SERIES
-         PARALLEL
-          0
-          5
-         PARALLEL
-          1
-          4
-         PARALLEL
-          2
-          3
-        sage: either_connected_or_not_connected(2, [1, 4], g)
-        True
-        sage: either_connected_or_not_connected(2, [3, 4], g)
-        False
-    """
-    # marks whether vertex v is connected to first vertex in the module
-    connected = graph.has_edge(vertices_in_module[0], v)
-
-    # if connected is True then all vertices in module should be connected to
-    # v else all should be disconnected
-    return all(graph.has_edge(u, v) == connected for u in vertices_in_module)
-
-def children_node_type(module, node_type):
-    """
-    Check whether the node type of the children of ``module`` is ``node_type``.
-    INPUT:
-    - ``module`` -- module which is tested
-    - ``node_type`` -- input node_type
-    EXAMPLES::
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: g = graphs.OctahedralGraph()
-        sage: tree_root = modular_decomposition(g)
-        sage: print_md_tree(modular_decomposition(g))
-        SERIES
-         PARALLEL
-          0
-          5
-         PARALLEL
-          1
-          4
-         PARALLEL
-          2
-          3
-        sage: children_node_type(tree_root, NodeType.SERIES)
-        False
-        sage: children_node_type(tree_root, NodeType.PARALLEL)
-        True
-    """
-    return all(node.node_type == node_type for node in module.children)
-
-
-def test_module(module, graph):
-    """
-    Test whether input module is actually a module
-    INPUT:
-    - ``module`` -- module which needs to be tested
-    - ``graph`` -- input sage graph which contains the module
-    OUTPUT:
-    ``True`` if input module is a module by definition else ``False``
-    EXAMPLES::
-        sage: from sage.graphs.graph_decompositions.modular_decomposition import *
-        sage: g = graphs.HexahedralGraph()
-        sage: tree_root = modular_decomposition(g)
-        sage: test_module(tree_root, g)
-        True
-        sage: test_module(tree_root.children[0], g)
-        True
-    """
-    # A single vertex is a module
-    if module.node_type == NodeType.NORMAL:
-        return True
-
-    # vertices contained in module
-    vertices_in_module = get_vertices(module)
-
-    # vertices outside module
-    vertices_outside = list(set(graph.nodes) - set(vertices_in_module))
-
-    # Nested module with only one child
-    if module.node_type != NodeType.NORMAL and len(module.children) == 1:
-        return False
-
-    # If children of SERIES module are all SERIES modules
-    if module.node_type == NodeType.SERIES:
-        if children_node_type(module, NodeType.SERIES):
-            return False
-
-    # If children of PARALLEL module are all PARALLEL modules
-    if module.node_type == NodeType.PARALLEL:
-        if children_node_type(module, NodeType.PARALLEL):
-            return False
-
-    # check the module by definition. Vertices in a module should all either
-    # be connected or disconnected to any vertex outside module
-    for v in vertices_outside:
-        if not either_connected_or_not_connected(v, vertices_in_module, graph):
-            return False
-    return True
-
-def test_modular_decomposition(tree_root, graph):
     """
     Test the input modular decomposition tree using recursion.
     INPUT:
@@ -1023,43 +738,10 @@ def test_modular_decomposition(tree_root, graph):
 
     return True
 
-## my functions
-
-import pace_parser
-import networkx as nx
-import matplotlib.pyplot as plt
-from tools import prime_paley
-import matplotlib.pyplot as plt
-from pathlib import Path
-import os
-from shutil import copyfile
-from pandas import DataFrame
-
 
 
 def is_prime(md_tree,graph):
     return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
-
-
- 
-def create_graph_from_dm_tree(root,graph):
-    decomposed_graph = nx.Graph()
-    maximal_modules = {frozenset(get_vertices(child)) for child in root.children}
-    maximal_modules_mapping = {}
-    ## map each vertex v to a module - where module contains v 
-    for child in maximal_modules:
-        for v in child:
-            maximal_modules_mapping[v] = child
-        
-    for child in maximal_modules:
-        ## from the defintion of a module we only need one vertex from a module 
-        ## a module is non empty set  
-        v = list(child)[0]
-        mutal_adj = set(graph.neighbors(v)) - child
-        for i in mutal_adj:
-            decomposed_graph.add_edge(child,maximal_modules_mapping[i])
-    
-    return decomposed_graph
 
 
 
@@ -1078,22 +760,19 @@ def run_test_on_wiki_graph():
 def run_test_on_icosahedral_graph():
     g = nx.generators.icosahedral_graph()
     md_tree = habib_maurer_algorithm(g)
+    p_set = prime_g(md_tree,g)
     preprocessed_graph = create_graph_from_prime_g(md_tree,g)
   
 
 def quotient_graph(root,g):
-    #quotient_g = nx.Graph()
     maximal_modules = {frozenset(get_vertices(child)) for child in root.children}
     vertices = []
     for module in maximal_modules:
         vertices.append(list(module)[0])
     quotient_g = g.subgraph(vertices)
-    # nx.draw_networkx(quotient_g)
-    # plt.show()
     return quotient_g
     
     
-
     
 def prime_g_helper(root,graph,prime_g_set):
     if root.node_type == NodeType.NORMAL:
@@ -1124,60 +803,7 @@ def create_graph_from_prime_g(md_tree,graph):
         preprocessed_graph = nx.union(preprocessed_graph,subgraph)
     return preprocessed_graph
 
- 
-BASE_PATH = Path(__file__).parent
-
-
-INSTANCES_PATH = (BASE_PATH / "exact-public").resolve() 
-RELEVENT_FOR_PREPROCESSING_PATH = (BASE_PATH / "relevant-preprocessing").resolve() 
-PREPROCESSED_GRAPH_OUTPUT = (BASE_PATH / "preprocessed_graphs").resolve() 
-PREPROCESSING_BEFORE_AFTER_PATH = (BASE_PATH / "preprocessing_before_after").resolve() 
-
-DATASET_FOLDER_NAME = "exact-public"
-DATASET_FOLDER_NAME_OUTPUT = "relevant-preprocessing"
-
-def main():
-    results = []
-    is_relevant_preprocessing = True
-    if not os.path.exists(RELEVENT_FOR_PREPROCESSING_PATH):
-        os.makedirs(RELEVENT_FOR_PREPROCESSING_PATH)
-        is_relevant_preprocessing = False
-    instances_path = RELEVENT_FOR_PREPROCESSING_PATH if is_relevant_preprocessing else INSTANCES_PATH 
-    files = sorted(os.listdir(instances_path))
-    if not os.path.exists(PREPROCESSED_GRAPH_OUTPUT):
-        os.makedirs(PREPROCESSED_GRAPH_OUTPUT)
-    if not os.path.exists(PREPROCESSING_BEFORE_AFTER_PATH):
-        os.makedirs(PREPROCESSING_BEFORE_AFTER_PATH)
-    for file_name in files:
-        if "gr" in file_name:
-            input_file_name = (instances_path / file_name).resolve().as_posix()
-            output_file_name = (RELEVENT_FOR_PREPROCESSING_PATH / file_name).resolve().as_posix()
-            graph = pace_parser.parse(input_file_name)
-            nodes_original_graph = graph.number_of_nodes()
-            edges_original_graph = graph.number_of_edges()
-            md_tree = habib_maurer_algorithm(graph)
-            if not is_prime(md_tree,graph):
-                if not is_relevant_preprocessing:
-                    copyfile(input_file_name, output_file_name)
-                preprocessed_graph_path = (PREPROCESSED_GRAPH_OUTPUT / f"preprocessed_{file_name}").resolve().as_posix()
-                preprocessed_graph = create_graph_from_prime_g(md_tree,graph)
-                nx.write_gexf(preprocessed_graph,preprocessed_graph_path)
-                nodes_preprocessed_graph = preprocessed_graph.number_of_nodes()
-                edges_preprocessed_graph = preprocessed_graph.number_of_edges()
-                results.append({"file_name": file_name
-                                ,"nodes_original_graph": nodes_original_graph
-                                ,"edges_original_graph": edges_original_graph
-                                ,"nodes_preprocessed_graph": nodes_preprocessed_graph
-                                ,"edges_preprocessed_graph": edges_preprocessed_graph
-                               })
-                
-    df =  DataFrame().from_records(results)
-    df.to_csv("results_1.csv")    
-
-  
-### example - 2,1001,15001,1
-
-## main()
+ # this function is used before calculating tww 
 
 def preproccess(graph):
     output_graph = graph 

@@ -14,13 +14,9 @@ import twin_width.heuristic as heuristic
 import twin_width.parser as parser
 import preprocessing
 import tools
-from networkx.generators.lattice import grid_2d_graph
-from networkx.generators.random_graphs import gnp_random_graph
-#import treewidth
 from pathlib import Path
 from pandas import DataFrame
 
-#print(f"{tools.solve_grid2(7,7, 3)}")
 
 BASE_PATH = Path(__file__).parent
 
@@ -30,64 +26,57 @@ INSTANCES_PATH = (BASE_PATH / "tiny-set").resolve()
 if not os.path.exists(INSTANCES_PATH):
     print(f"folder is not exists {INSTANCES_PATH}")
 files = sorted(os.listdir(INSTANCES_PATH))
+graph_files = filter(lambda file_name: file_name.endswith(".gr"), files)
 results = []
 for file_name in files:
-    if "gr" in file_name:
-        instance_file_name = (INSTANCES_PATH / file_name).resolve().as_posix() 
+    instance_file_name = (INSTANCES_PATH / file_name).resolve().as_posix() 
 
-        output_graphs = False
-        if any(x == "-l" for x in sys.argv[1:-1]):
-            output_graphs = True
+    output_graphs = False
+    if any(x == "-l" for x in sys.argv[1:-1]):
+        output_graphs = True
 
-        if instance_file_name.endswith(".cnf"):
-            g = parser.parse_cnf(file_name)
-            ub = heuristic.get_ub2_polarity(g)
-            print(f"UB {ub}")
-
-            start = time.time()
-            ##if len(sys.argv) > 2 and not output_graphs:
-            ##    cb = treewidth.solve(g.to_undirected(), len(g.nodes) - 1, slv.Glucose3, True)[1]
-            ##else:
-            enc = encoding_signed_bipartite.TwinWidthEncoding()
-            cb = enc.run(g, slv.Cadical103, ub)
-        else:
-            g = parser.parse(instance_file_name)[0]
-            # g = tools.prime_paley(29)
-
-            print(f"{len(g.nodes)} {len(g.edges)}")
-            ## our preprocessing 
-            g = preprocessing.preproccess(g)
-
-            if len(g.nodes) == 1:
-                print("Done, width: 0")
-                exit(0)
-
-            # TODO: Deal with disconnected?
-            ub = heuristic.get_ub(g)
-            ub2 = heuristic.get_ub2(g)
-            print(f"UB {ub} {ub2}")
-            ub = min(ub, ub2)
-
-            start = time.time()
-            enc = encoding.TwinWidthEncoding()
-            # enc = other.TwinWidthEncoding2(g)
-            # enc = other2.TwinWidthEncoding()
-            # enc = encoding2.TwinWidthEncoding2(g)
-
-            cb = enc.run(g, slv.Cadical103, ub)
+    if instance_file_name.endswith(".cnf"):
+        g = parser.parse_cnf(file_name)
+        ub = heuristic.get_ub2_polarity(g)
         
-        duration = time.time() - start 
-        print(f"Finished, result: {cb}")
-        results.append({"instance_name": instance_file_name
-                        ,"# nodes": g.number_of_nodes()
-                        ,"# edges": g.number_of_edges()
-                        ,"tww": cb[0]
-                        ,"elimination_ordering": cb[1]
-                        ,"contraction_tree": cb[2]
-                        ,"duration": duration
-                                })    
+        print(f"UB {ub}")
+        start = time.time()
+    
+        enc = encoding_signed_bipartite.TwinWidthEncoding()
+        cb = enc.run(g, slv.Cadical103, ub)
+    else:
+        g = parser.parse(instance_file_name)[0]
 
-        if output_graphs:
+        print(f"{len(g.nodes)} {len(g.edges)}")
+       
+        ## our preprocessing 
+        g = preprocessing.preproccess(g)
+
+        if len(g.nodes) == 1:
+            print("Done, width: 0")
+            exit(0)
+
+        ub = heuristic.get_ub(g)
+        ub2 = heuristic.get_ub2(g)
+        print(f"UB {ub} {ub2}")
+        ub = min(ub, ub2)
+
+        start = time.time()
+        enc = encoding.TwinWidthEncoding()
+        cb = enc.run(g, slv.Cadical103, ub)
+    
+    duration = time.time() - start 
+    print(f"Finished, result: {cb}")
+    results.append({"instance_name": file_name
+                    ,"# nodes": g.number_of_nodes()
+                    ,"# edges": g.number_of_edges()
+                    ,"tww": cb[0]
+                    ,"elimination_ordering": cb[1]
+                    ,"contraction_tree": cb[2]
+                    ,"duration": duration
+                            })    
+
+    if output_graphs:
             instance_name = os.path.split(instance_file_name)[-1]
             mg = cb[2]
             for u, v in g.edges:
