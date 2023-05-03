@@ -1,4 +1,5 @@
-from networkx import Graph
+from networkx import Graph, connected_components, is_connected, subgraph
+import heuristic
 from functools import cmp_to_key
 from pysat.formula import CNF, IDPool
 from pysat.card import ITotalizer, CardEnc, EncType
@@ -75,12 +76,12 @@ class TwinWidthEncoding:
                         continue
 
                     formula.append([-self.tord(i, j), -self.tord(j, k), self.tord(i, k)])
-        
+
         # Merge/ord relationship
-        for i in range(1, len(g.nodes) + 1):            
+        for i in range(1, len(g.nodes) + 1):
             for j in range(i+1, len(g.nodes) + 1):
                 formula.append([-self.merge[i][j], self.tord(i, j)])
-                
+
         # single merge target
         for i in range(1, len(g.nodes)):
             formula.extend(CardEnc.atleast([self.merge[i][j] for j in range(i + 1, len(g.nodes) + 1)], bound=1, vpool=self.pool))
@@ -115,11 +116,24 @@ class TwinWidthEncoding:
         self.sb_reds(n, formula)
         return formula
 
-    def run(self, g, solver, start_bound, verbose=True, check=True, lb=0):
+    def run(self, g: Graph, solver, start_bound, verbose=True, check=True, lb=0):
+        start = time.time()
+        if is_connected(g):
+            return self.run_instance(g, solver, start_bound, verbose, check, lb=0)
+        else:
+            return max([self.run_instance(subgraph(g, c),
+                                solver, min(heuristic.get_ub(subgraph(g, c)), heuristic.get_ub2(subgraph(g, c))),
+                                verbose, check, lb=0) for c in connected_components(g)], key=itemgetter(0))
+
+    def run_instance(self, g, solver, start_bound, verbose=True, check=True, lb=0):
+        if len(g.nodes) == 1:
+            print("Done, width: 0")
+            return 0, None, None, time.time() - time.time()
+
+        times = {}
         start = time.time()
         formula = self.encode(g, start_bound)
         cb = start_bound
-
         if verbose:
             print(f"Created encoding in {time.time() - start}")
         od = None
@@ -139,19 +153,22 @@ class TwinWidthEncoding:
                     if verbose:
                         print(f"Failed {i}")
                         print(f"Finished cycle in {time.time() - start}")
+                        times[i] = time.time() - start
                     break
 
                 if verbose:
+                    times[i] = time.time() - start
                     print(f"Finished cycle in {time.time() - start}")
+
 
         for v in self.totalizer.values():
             for t in v.values():
                 t.delete()
 
         if od is None:
-            return cb
+            return cb, None, None, None
         else:
-            return cb, od, mg
+            return cb, od, mg, times
 
     def get_card_vars(self, d):
         vars = []

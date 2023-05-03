@@ -11,4 +11,6 @@ pyparsing==3.0.9
 python-dateutil==2.8.2
 six==1.16.0
 python-sat==0.1.8.dev3
+pandas==2.0.1
 pysat
+typer[all]
