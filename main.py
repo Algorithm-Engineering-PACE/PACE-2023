@@ -35,7 +35,11 @@ def process_graphs_from_dir(instance_path: Path, start: int =0, to: int=-1):
     for file_name in files:
         process_file(instance_path, file_name, results=results)
 
-def process_file(instance_path: Path, file_name: str,
+@app.command()
+def process_graph_from_instance(file_name: Path):
+    process_file(BASE_PATH, file_name)
+
+def process_file(instance_path: Path, file_name: str | Path,
     csv_time: datetime=datetime.now(), results: list=[]):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
 
@@ -54,8 +58,6 @@ def process_file(instance_path: Path, file_name: str,
         cb = enc.run(g, slv.Cadical103, ub)
     else:
         g = parser.parse(instance_file_name)[0]
-
-        print(f"{len(g.nodes)} {len(g.edges)}")
 
         ## our preprocessing
         g = preprocessing.preproccess(g)

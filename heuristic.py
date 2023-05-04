@@ -21,7 +21,7 @@ def get_ub(g):
     c_max = 0
     while len(g.nodes) > 1:
         # Pick next node
-        c_min = maxsize, (0, 0)
+        c_min = maxsize, (list(g.nodes)[0], list(g.nodes)[1])
 
         for u in g.nodes:
             for v in g.neighbors(u):
@@ -60,7 +60,7 @@ def get_ub(g):
                     cc += 1
             c_max = max(c_max, cc)
 
-    return c_max, mg, od
+    return c_max #, mg, od
 
 
 def get_ub2(g):

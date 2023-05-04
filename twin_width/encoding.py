@@ -6,6 +6,7 @@ from pysat.card import ITotalizer, CardEnc, EncType
 import twin_width.tools as tools
 import subprocess
 import time
+from operator import itemgetter
 
 
 # TODO: Symmetry breaking: If two consecutive contractions have to node with red edges in common -> lex order
