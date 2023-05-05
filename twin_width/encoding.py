@@ -1,5 +1,5 @@
 from networkx import Graph, connected_components, is_connected, subgraph
-import heuristic
+import twin_width.heuristic as heuristic
 from functools import cmp_to_key
 from pysat.formula import CNF, IDPool
 from pysat.card import ITotalizer, CardEnc, EncType
