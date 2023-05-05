@@ -1,13 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 from sys import maxsize
-
-
-def get_open_neighberhood_without_node(neighbors, node) -> set:
-    u_n = set(neighbors)
-    u_n.discard(node)
-    return u_n
 
 
 def get_ub(g):
@@ -20,18 +11,17 @@ def get_ub(g):
 
     c_max = 0
     while len(g.nodes) > 1:
-        # Pick next node setting default in case of several isolated vertices 
-        c_min = maxsize, (list(g.nodes)[0], list(g.nodes)[1]) 
+        # Pick next node setting default in case of several isolated vertices
+        c_min = maxsize, (list(g.nodes)[0], list(g.nodes)[1])
 
         for u in g.nodes:
             for v in g.neighbors(u):
-                c_len = len(get_open_neighberhood_without_node(g.neighbors(
-                    u), v) ^ get_open_neighberhood_without_node(g.neighbors(v), u))
+                c_len = len(set(g.neighbors(u)) ^ set(g.neighbors(v)))
                 if c_len < c_min[0]:
                     c_min = (c_len, (u, v))
 
-        n = c_min[1][0]  # u
-        t = c_min[1][1]  # v
+        n = c_min[1][0]
+        t = c_min[1][1]
 
         tn = set(g.neighbors(t))
         tn.discard(n)
@@ -39,7 +29,7 @@ def get_ub(g):
         od.append(n)
         mg[n] = t
 
-        for v in nn:  # for every neighbour  of u
+        for v in nn:
             if v != t:
                 # Red remains, should edge exist
                 if v in tn and g[n][v]['red']:
@@ -60,7 +50,7 @@ def get_ub(g):
                     cc += 1
             c_max = max(c_max, cc)
 
-    return c_max, mg, od
+    return c_max
 
 
 def get_ub2(g):
@@ -90,10 +80,8 @@ def get_ub2(g):
         for n1 in g.nodes:
             for n2 in g.nodes:
                 if n2 > n1:
-                    delta = (set(g.neighbors(n1)) ^ set(
-                        g.neighbors(n2))) - {n1, n2}
-                    # len((delta | reds[n1] | reds[n2]) - {n1, n2})
-                    new_test = len(delta)
+                    delta = (set(g.neighbors(n1)) ^ set(g.neighbors(n2))) - {n1, n2}
+                    new_test = len(delta)  # len((delta | reds[n1] | reds[n2]) - {n1, n2})
 
                     # Test if twin
                     if len(delta) == 0:
@@ -172,12 +160,11 @@ def get_ub2_polarity(g):
             for n2 in g.nodes:
                 if n2 > n1:
                     delta = ((set(g.neighbors(n1)) ^ set(g.neighbors(n2))))\
-                        | (set(g.predecessors(n1)) ^ set(g.successors(n2))) \
-                        | (set(g.successors(n1)) ^ set(g.predecessors(n2)))\
-                        - {n1, n2}
+                            | (set(g.predecessors(n1)) ^ set(g.successors(n2))) \
+                            | (set(g.successors(n1)) ^ set(g.predecessors(n2)))\
+                            - {n1, n2}
 
-                    # len((delta | reds[n1] | reds[n2]) - {n1, n2})
-                    new_test = len(delta)
+                    new_test = len(delta)  # len((delta | reds[n1] | reds[n2]) - {n1, n2})
 
                     # Test if twin
                     if len(delta) == 0:
