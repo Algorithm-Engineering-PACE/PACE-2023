@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 import pysat.solvers as slv
 
-import twin_width.encoding as encoding
+import twin_width.encoding_eval as encoding
 import twin_width.encoding_signed_bipartite as encoding_signed_bipartite
 import twin_width.heuristic as heuristic
 import twin_width.parser as parser
@@ -14,6 +14,8 @@ import tools
 from pathlib import Path
 from pandas import DataFrame
 import typer
+
+from pysat.card import EncType
 
 app = typer.Typer()
 BASE_PATH = Path(__file__).parent
