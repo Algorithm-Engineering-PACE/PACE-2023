@@ -83,7 +83,7 @@ def process_file(instance_path: Path, file_name: str | Path,
         ub = min(ub, ub2)
 
         start = time.time()
-        enc = encoding.TwinWidthEncoding()
+        enc = encoding.EncodingEvaluator(EncType.native)
         cb = enc.run(g, slv.Cadical103, ub)
 
     duration = time.time() - start
