@@ -49,8 +49,8 @@ class EncodingEvaluator(TwinWidthEncoding2):
         for i in range(1, n+1):
             for j in range(1, n+1):
                 for k in range(i+1, n-d+1):
-                    self.formula.append([-self.ord[i][j], -merge_prime[k][j], self.merge_ord[i][k]])
-                    self.formula.append([-self.ord[i][j], merge_prime[k][j], -self.merge_ord[i][k]])
+                    self.formula.append([-self.ord[k][j], -merge_prime[i][j], self.merge_ord[i][k]])
+                    self.formula.append([-self.ord[k][j], merge_prime[i][j], -self.merge_ord[i][k]])
 
         for i in range(1, n+1):
             for j in range(i+1, n-d+1):
