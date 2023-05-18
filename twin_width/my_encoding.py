@@ -20,9 +20,9 @@ class MyTwinWidthEncoding:
         self.card_enc = card_enc
 
         self.num_original_vertices = len(g.nodes)
-        self.num_total_vertices = 2*len(g.nodes)-d-2
-        self.parent_start_index = 2*len(g.nodes)+1
-        self.child_end_index = 2*len(g.nodes)-d-3
+        self.num_total_vertices = 2 * len(g.nodes) - d - 2
+        self.parent_start_index = len(g.nodes) + 1
+        self.child_end_index = 2 * len(g.nodes) - d - 3
 
     def remap_graph(self, g):
         self.node_map = {}
@@ -42,7 +42,7 @@ class MyTwinWidthEncoding:
         return gn
 
     def init_var(self, g, d):
-        self.edge = [{} for _ in range(0, self.num_total_vertices+1)]
+        self.edge = [{} for _ in range(0, self.num_total_vertices + 1)]
         self.red = [{} for _ in range(0, self.num_total_vertices + 1)]
         self.left_child = [{} for _ in range(0, self.num_total_vertices + 1)]
         self.right_child = [{} for _ in range(0, self.num_total_vertices + 1)]
@@ -52,19 +52,19 @@ class MyTwinWidthEncoding:
         self.left_red = [{} for _ in range(0, self.num_total_vertices + 1)]
         self.right_red = [{} for _ in range(0, self.num_total_vertices + 1)]
         self.red_unvanished = [
-                [{} for _ in range(0, self.num_total_vertices + 1)]
-                for _ in range(0, self.num_total_vertices + 1)]
+            [{} for _ in range(0, self.num_total_vertices + 1)]
+            for _ in range(0, self.num_total_vertices + 1)
+        ]
 
         # variables for edges and red-edges
         # we have edge_i_j and red_i_j for i<j
-        for i in range(1, self.num_total_vertices+1):
-            for j in range(i+1, self.num_total_vertices+1):
+        for i in range(1, self.num_total_vertices + 1):
+            for j in range(i + 1, self.num_total_vertices + 1):
                 self.edge[i][j] = self.pool.id(f"edge_{i}_{j}")
                 self.red[i][j] = self.pool.id(f"red_{i}_{j}")
 
-        for i in range(self.parent_start_index, self.num_total_vertices+1):
-            for j in range(1, i+1):
-
+        for i in range(self.parent_start_index, self.num_total_vertices + 1):
+            for j in range(1, i + 1):
                 # variables for parent-child relation
                 self.left_child[i][j] = self.pool.id(f"left_child_{i}_{j}")
                 self.right_child[i][j] = self.pool.id(f"right_child_{i}_{j}")
@@ -81,25 +81,26 @@ class MyTwinWidthEncoding:
                 self.left_red[j][i] = self.pool.id(f"left_red_{j}_{i}")
                 self.right_red[j][i] = self.pool.id(f"right_red_{j}_{i}")
 
-        for i in range(self.parent_start_index, self.num_total_vertices+1):
-            for j in range(1, i+1):
-                for k in range(1, i+1):
-                    if(i == j):
+        for i in range(self.parent_start_index, self.num_total_vertices + 1):
+            for j in range(1, i + 1):
+                for k in range(1, i + 1):
+                    if i == j:
                         continue
                     a = min(j, k)
                     b = max(j, k)
                     self.red_unvanished[i][a][b] = self.pool.id(
-                            f"right_unvanished_{i}_{a}_{b}")
+                        f"right_unvanished_{i}_{a}_{b}"
+                    )
 
     def parent_start_index(self, c):
-        return max(self.parent_start_index, c+1)
+        return max(self.parent_start_index, c + 1)
 
     # encoding the original edges of the graph and
     # initializing initial red edges to be empty
     def encode_original_edges(self, g):
-        for i in range(1, self.num_original_vertices+1):
+        for i in range(1, self.num_original_vertices + 1):
             nb = set(g.neighbors(i))
-            for j in range(i+1, self.num_original_vertices+1):
+            for j in range(i + 1, self.num_original_vertices + 1):
                 if j in nb:
                     self.formula.append([self.edge[i][j]])
                 else:
@@ -109,32 +110,39 @@ class MyTwinWidthEncoding:
     # clauses encoding the parent-child relation
     # every child has at most one parent
     # every non-original vertex has exactly one left child
+    # self.left_child[i][j] is true if and only if v_j is contraccted to a new vertex v_i. for i>n.
     # and one right child
     def encode_parent_child(self):
-
         # every child has at most one parent
         for c in range(1, self.child_end_index):
             parent_left_list = [
-                self.left_child[p][c] for p in range
-                (self.parent_start_index(c), self.num_total_vertices+1)]
+                self.left_child[p][c]
+                for p in range(self.parent_start_index(c), self.num_total_vertices + 1)
+            ]
             parent_right_list = [
-                self.right_child[p][c] for p in range
-                (self.parent_start_index(c), self.num_total_vertices+1)]
-            parent_list = parent_left_list+parent_right_list
-            self.formula.extend(
-                CardEnc.atmost(parent_list, vpool=self.pool, bound=1))
+                self.right_child[p][c]
+                for p in range(self.parent_start_index(c), self.num_total_vertices + 1)
+            ]
+            parent_list = parent_left_list + parent_right_list
+            self.formula.extend(CardEnc.atmost(parent_list, vpool=self.pool, bound=1))
 
         # every non-original vertex has exactly one left child
         # and one right child
-        for p in range(self.parent_start_index, self.num_total_vertices+1):
+        for p in range(self.parent_start_index, self.num_total_vertices + 1):
             self.formula.extend(
-             CardEnc.equals(
-              [self.left_child[p][c] for c in range(1, p)],
-              vpool=self.pool, encoding=self.card_enc))
+                CardEnc.equals(
+                    [self.left_child[p][c] for c in range(1, p)],
+                    vpool=self.pool,
+                    encoding=self.card_enc,
+                )
+            )
             self.formula.extend(
-             CardEnc.equals(
-              [self.right_child[p][c] for c in range(1, p)],
-              vpool=self.pool, encoding=self.card_enc))
+                CardEnc.equals(
+                    [self.right_child[p][c] for c in range(1, p)],
+                    vpool=self.pool,
+                    encoding=self.card_enc,
+                )
+            )
 
     # encoding whether j is vanished after creating i
     # j is vanished if i is the parent of j
@@ -142,30 +150,38 @@ class MyTwinWidthEncoding:
     def encode_vanished(self):
         s = self.parent_start_index
 
-        for i in range(s, self.num_total_vertices+1):
+        for i in range(s, self.num_total_vertices + 1):
             self.formula.append([-self.vanished[i][i]])
 
         # first encode when i is the first non-original vertex
         # the two vertices merging into it gets vanished
         for j in range(1, s):
-            self.formula.append(fops.equiv(
-                                 [self.vanished[s][j]],
-                                 [self.left_child[s][j],
-                                     self.right_child[s][j]]))
+            self.formula.append(
+                fops.equiv(
+                    [self.vanished[s][j]],
+                    [self.left_child[s][j], self.right_child[s][j]],
+                )
+            )
 
         # now encode it for the remaining non-original vertices
         # the two vertices merging into i gets vanished
         # and also the ones that are vanished in i-1 remain vanished
-        for i in range(s+1, self.num_total_vertices+1):
+        for i in range(s + 1, self.num_total_vertices + 1):
             for j in range(1, i):
-                self.formula.append(fops.equiv(
-                    [self.vanished[i][j]],
-                    [self.vanished[i-1][j], self.left_child[i][j],
-                        self.right_child[i][j]]))
+                self.formula.append(
+                    fops.equiv(
+                        [self.vanished[i][j]],
+                        [
+                            self.vanished[i - 1][j],
+                            self.left_child[i][j],
+                            self.right_child[i][j],
+                        ],
+                    )
+                )
 
     # encoding edges and red-edges for contracted vertices
     def encode_edges(self, n, d):
-        for p in range(self.parent_start_index, self.num_total_vertices+1):
+        for p in range(self.parent_start_index, self.num_total_vertices + 1):
             for c in range(1, p):
                 for i in range(1, p):
                     if i == c:
@@ -173,99 +189,112 @@ class MyTwinWidthEncoding:
                     a = min(i, c)
                     b = max(i, c)
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.left_child[p][c]],
-                                    [self.edge[a][b]]),
-                                [self.left_edge[i][p]]))
+                        fops.implies(
+                            fops.conj([self.left_child[p][c]], [self.edge[a][b]]),
+                            [self.left_edge[i][p]],
+                        )
+                    )
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.right_child[p][c]],
-                                    [self.edge[a][b]]),
-                                [self.right_edge[i][p]]))
+                        fops.implies(
+                            fops.conj([self.right_child[p][c]], [self.edge[a][b]]),
+                            [self.right_edge[i][p]],
+                        )
+                    )
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.left_child[p][c]],
-                                    [self.red[a][b]]),
-                                [self.left_red[i][p]]))
+                        fops.implies(
+                            fops.conj([self.left_child[p][c]], [self.red[a][b]]),
+                            [self.left_red[i][p]],
+                        )
+                    )
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.right_child[p][c]],
-                                    [self.red[a][b]]),
-                                [self.right_red[i][p]]))
+                        fops.implies(
+                            fops.conj([self.right_child[p][c]], [self.red[a][b]]),
+                            [self.right_red[i][p]],
+                        )
+                    )
 
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.left_child[p][c]],
-                                    [-self.edge[a][b]]),
-                                [-self.left_edge[i][p]]))
+                        fops.implies(
+                            fops.conj([self.left_child[p][c]], [-self.edge[a][b]]),
+                            [-self.left_edge[i][p]],
+                        )
+                    )
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.right_child[p][c]],
-                                    [-self.edge[a][b]]),
-                                [-self.right_edge[i][p]]))
+                        fops.implies(
+                            fops.conj([self.right_child[p][c]], [-self.edge[a][b]]),
+                            [-self.right_edge[i][p]],
+                        )
+                    )
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.left_child[p][c]],
-                                    [-self.red[a][b]]),
-                                [-self.left_red[i][p]]))
+                        fops.implies(
+                            fops.conj([self.left_child[p][c]], [-self.red[a][b]]),
+                            [-self.left_red[i][p]],
+                        )
+                    )
                     self.formula.append(
-                            fops.implies(
-                                fops.conj(
-                                    [self.right_child[p][c]],
-                                    [-self.red[a][b]]),
-                                [-self.right_red[i][p]]))
+                        fops.implies(
+                            fops.conj([self.right_child[p][c]], [-self.red[a][b]]),
+                            [-self.right_red[i][p]],
+                        )
+                    )
 
-        for i in range(self.parent_start_index, self.num_total_vertices+1):
+        for i in range(self.parent_start_index, self.num_total_vertices + 1):
             for j in range(1, i):
                 self.formula.append(
-                        fops.equiv(
-                            [self.edge[j][i]],
-                            fops.conj(
-                                [-self.vanished[i][j]],
-                                [self.left_edge[j][i],
-                                    self.right_edge[j][i]])))
+                    fops.equiv(
+                        [self.edge[j][i]],
+                        fops.conj(
+                            [-self.vanished[i][j]],
+                            [self.left_edge[j][i], self.right_edge[j][i]],
+                        ),
+                    )
+                )
                 self.formula.append(
-                        fops.equiv(
-                            [self.red[j][i]],
-                            fops.conj(
-                                [self.edge[j][i]],
-                                [self.left_red[j][i], self.right_red[j][i],
-                                    fops.xor(
-                                        self.left_edge[j][i],
-                                        self.right_edge[j][i])])))
+                    fops.equiv(
+                        [self.red[j][i]],
+                        fops.conj(
+                            [self.edge[j][i]],
+                            [
+                                self.left_red[j][i],
+                                self.right_red[j][i],
+                                fops.xor(self.left_edge[j][i], self.right_edge[j][i]),
+                            ],
+                        ),
+                    )
+                )
 
     def encode_red_unvanished(self):
-        for i in range(self.parent_start_index, self.num_total_vertices+1):
-            for j in range(1, i+1):
-                for k in range(1, i+1):
-                    if(i == j):
+        for i in range(self.parent_start_index, self.num_total_vertices + 1):
+            for j in range(1, i + 1):
+                for k in range(1, i + 1):
+                    if i == j:
                         continue
                     a = min(j, k)
                     b = max(j, k)
                     self.formula.append(
-                            fops.equiv(
-                                self.red_unvanished[i][a][b],
-                                fops.conj(
-                                    -self.vanished[i][a], -self.vanished[i][b],
-                                    self.red[a][b])))
+                        fops.equiv(
+                            self.red_unvanished[i][a][b],
+                            fops.conj(
+                                -self.vanished[i][a],
+                                -self.vanished[i][b],
+                                self.red[a][b],
+                            ),
+                        )
+                    )
 
     def encode_counters(self, d):
-        for i in range(self.parent_start_index, self.num_total_vertices+1):
-            for j in range(1, i+1):
+        for i in range(self.parent_start_index, self.num_total_vertices + 1):
+            for j in range(1, i + 1):
                 vars_to_count = [
-                        self.red_unvanished[i][min(j, k)][max(j, k)]
-                        for k in range(1, i+1) if j != k]
+                    self.red_unvanished[i][min(j, k)][max(j, k)]
+                    for k in range(1, i + 1)
+                    if j != k
+                ]
                 self.formula.extend(
-                        CardEnc.atmost(
-                            vars_to_count, bound=d, vpool=self.pool,
-                            encoding=self.card_enc))
+                    CardEnc.atmost(
+                        vars_to_count, bound=d, vpool=self.pool, encoding=self.card_enc
+                    )
+                )
 
     def encode(self, g, d):
         g = self.remap_graph(g)
@@ -352,24 +381,28 @@ class MyTwinWidthEncoding:
             print("Node twice in order")
 
         for i in range(1, len(g.nodes) + 1 - d):
-            for j in range(i+1, len(g.nodes) + 1):
+            for j in range(i + 1, len(g.nodes) + 1):
                 if model[self.merge[i][j]]:
-                    if od[i-1] in mg:
+                    if od[i - 1] in mg:
                         print("Error, double merge!")
-                    mg[od[i-1]] = od[j-1]
+                    mg[od[i - 1]] = od[j - 1]
 
         # Check edges relation...
-        for i in range(0, len(g.nodes)-d):
-            for j in range(i+1, len(g.nodes)-d):
-                if model[self.edge[i+1][j+1]] ^ g.has_edge(unmap[od[i]], unmap[od[j]]):
-                    if model[self.edge[i+1][j+1]]:
-                        print(f"Edge error: Unknown edge in model {i+1}, {j+1} = {od[i], od[j]}")
+        for i in range(0, len(g.nodes) - d):
+            for j in range(i + 1, len(g.nodes) - d):
+                if model[self.edge[i + 1][j + 1]] ^ g.has_edge(
+                    unmap[od[i]], unmap[od[j]]
+                ):
+                    if model[self.edge[i + 1][j + 1]]:
+                        print(
+                            f"Edge error: Unknown edge in model {i+1}, {j+1} = {od[i], od[j]}"
+                        )
                     else:
                         print("Edge error: Edge not in model")
 
         # Perform contractions, last node needs not be contracted...
         for u, v in g.edges:
-            g[u][v]['red'] = False
+            g[u][v]["red"] = False
 
         c_max = 0
         step = 1
@@ -383,23 +416,26 @@ class MyTwinWidthEncoding:
             for v in nn:
                 if v != t:
                     # Red remains, should edge exist
-                    if v in tn and g[n][v]['red']:
-                        g[t][v]['red'] = True
+                    if v in tn and g[n][v]["red"]:
+                        g[t][v]["red"] = True
                     # Add non-existing edges
                     if v not in tn:
                         g.add_edge(t, v, red=True)
             for v in tn:
                 if v not in nn:
-                    g[t][v]['red'] = True
+                    g[t][v]["red"] = True
             g.remove_node(n)
 
             # Count reds...
             for u in g.nodes:
                 cc = 0
                 for v in g.neighbors(u):
-                    if g[u][v]['red']:
+                    if g[u][v]["red"]:
                         cc += 1
-                        u2, v2 = od.index(self.node_map[u]) + 1, od.index(self.node_map[v]) + 1
+                        u2, v2 = (
+                            od.index(self.node_map[u]) + 1,
+                            od.index(self.node_map[v]) + 1,
+                        )
                         u2, v2 = min(u2, v2), max(u2, v2)
                         if not model[self.red[step][u2][v2]]:
                             print(f"Missing red edge in step {step}")
