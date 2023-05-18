@@ -30,7 +30,7 @@ def process_graphs_from_dir(instance_path: Path, start: int =0, to: int=-1):
     if not os.path.exists(instance_path):
         print(f"folder is not exists {instance_path}")
     files = sorted(os.listdir(instance_path))
-    filter(lambda file_name: file_name.endswith(".gr"), files)
+    files = filter(lambda file_name: file_name.endswith(".gr"), files)
     results = []
     for file_name in files:
         process_file(instance_path, file_name, results=results)
@@ -43,6 +43,7 @@ def process_file(instance_path: Path, file_name: str | Path,
     csv_time: datetime=datetime.now(), results: list=[]):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
 
+    print(f"processing file {file_name}....")
     output_graphs = False
     if any(x == "-l" for x in sys.argv[1:-1]):
         output_graphs = True
