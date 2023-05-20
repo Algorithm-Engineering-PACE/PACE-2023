@@ -1,6 +1,6 @@
 import networkx as nx
 import bz2
-
+import sys
 
 def parse(path):
     if path.lower().endswith(".bz2"):
@@ -66,3 +66,32 @@ def parse_cnf(path):
                     clause += 1
 
     return g
+
+def parse_stdin():
+    g = nx.Graph()
+    # Read input from stdin
+    for index,line in enumerate(sys.stdin):
+        try:
+            line = line.decode('ascii')
+        except AttributeError:
+            pass
+        entries = line.strip().split()
+        if index == 0:
+            num_of_nodes = int(entries[2])
+            g.add_nodes_from(list(i for i in range(1,num_of_nodes + 1)))
+        else:
+            if len(entries) == 2:
+                try:
+                    x , y = int(entries[0]) ,int(entries[1])
+                except ValueError:
+                    continue
+                g.add_edge(x, y)
+    
+    return g 
+                    
+                
+                
+        
+        
+        
+    

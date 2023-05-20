@@ -1,15 +1,15 @@
 import sys
+import time
 
-import networkx
-import networkx as nx
-from networkx import DiGraph
+
+from networkx import DiGraph,AmbiguousSolution
+import networkx.algorithms.bipartite as bp
 from functools import cmp_to_key
 from pysat.formula import CNF, IDPool
 from pysat.card import ITotalizer, CardEnc, EncType
+
 import tools
-import subprocess
-import time
-import networkx.algorithms.bipartite as bp
+from logger import logger
 
 # TODO: Symmetry breaking: If two consecutive contractions have to node with red edges in common -> lex order
 class TwinWidthEncoding:
@@ -27,7 +27,7 @@ class TwinWidthEncoding:
     def remap_graph(self, g):
         try:
             self.partition1, self.partition2 = bp.sets(g)
-        except networkx.AmbiguousSolution:
+        except AmbiguousSolution:
             self.partition1 = set(x for x in g.nodes if x.startwith("v"))
             self.partition2 = set(x for x in g.nodes if x.startwith("c"))
 
@@ -55,7 +55,7 @@ class TwinWidthEncoding:
         if self.partition1 is None:
             try:
                 self.partition1, self.partition2 = bp.sets(g)
-            except networkx.AmbiguousSolution:
+            except AmbiguousSolution:
                 self.partition1 = set(x for x in g.nodes if x.startwith("v"))
                 self.partition2 = set(x for x in g.nodes if x.startwith("c"))
 
@@ -74,7 +74,7 @@ class TwinWidthEncoding:
                     for k in range(1, len(g.nodes) + 1):
                         self.edge[k][i][j] = self.pool.id(f"edge{k}_{i}_{j}")
                         self.edge[k][j][i] = self.edge[k][i][j]
-        print("x")
+        logger.debug("x")
     # def tmerge(self, i, j):
     #     if i < j:
     #         return self.merge[i][j]
@@ -141,10 +141,8 @@ class TwinWidthEncoding:
                 formula.extend(self.totalizer[i][x].cnf)
                 self.pool.occupy(self.pool.top-1, self.totalizer[i][x].top_id)
 
-        #self.sb_grid(g, n, formula)
         self.sb_ord(n, formula)
-        #self.sb_sth(g, formula, d)
-        #print(f"{len(formula.clauses)} / {formula.nv}")
+      
         return formula
 
     def run(self, g, solver, start_bound, verbose=True, check=True, lb=0):
@@ -153,33 +151,33 @@ class TwinWidthEncoding:
         cb = start_bound
 
         if verbose:
-            print(f"Created encoding in {time.time() - start}")
+            logger.debug(f"Created encoding in {time.time() - start}")
         od = None
         mg = None
         with solver() as slv:
             slv.append_formula(formula)
             for i in range(start_bound, lb-1, -1):
                 if verbose:
-                    print(f"{slv.nof_clauses()}/{slv.nof_vars()}")
+                    logger.debug(f"{slv.nof_clauses()}/{slv.nof_vars()}")
                 slv.append_formula([[x] for x in self.get_card_vars(i)])
 
                 if slv.solve():
                     cb = i
                     if verbose:
-                        print(f"Found {i}")
+                        logger.debug(f"Found {i}")
                         sys.stdout.flush()
                     if check:
                         mx, od, mg = self.decode(slv.get_model(), g, i)
-                        print(f"{mx}")
+                        logger.debug(f"{mx}")
                 else:
                     if verbose:
-                        print(f"Failed {i}")
-                        print(f"Finished cycle in {time.time() - start}")
+                        logger.debug(f"Failed {i}")
+                        logger.debug(f"Finished cycle in {time.time() - start}")
                         sys.stdout.flush()
                     break
 
                 if verbose:
-                    print(f"Finished cycle in {time.time() - start}")
+                    logger.debug(f"Finished cycle in {time.time() - start}")
                 sys.stdout.flush()
 
         for v in self.totalizer.values():
@@ -291,7 +289,7 @@ class TwinWidthEncoding:
                 if j in self.merge[i]:
                     if model[self.merge[i][j]]:
                         if i in mg:
-                            print("Error, double merge!")
+                            logger.error("Error, double merge!")
                         mg[i] = j
         mg[self.partition_sep] = len(g.nodes)
         # for c_i in range(self.partition_sep, len(g.nodes)):
@@ -307,18 +305,8 @@ class TwinWidthEncoding:
         for n in od[:-1]:
             t = unmap[mg[n]]
             n = unmap[n]
-            print(f"{n} => {t}")
-            # graph_export, line_export = tools.dot_export(g, t, n)
-            # with open(f"progress_{cnt}.dot", "w") as f:
-            #     f.write(graph_export)
-            # with open(f"progress_{cnt}.png", "w") as f:
-            #     subprocess.run(["dot", "-Kfdp", "-Tpng", f"progress_{cnt}.dot"], stdout=f)
-
-            # with open(f"line_{cnt}.dot", "w") as f:
-            #     f.write(line_export)
-            # with open(f"line_{cnt}.png", "w") as f:
-            #     subprocess.run(["dot", "-Tpng", f"line_{cnt}.dot"], stdout=f)
-
+            logger.debug(f"{n} => {t}")
+           
             tns = set(g.successors(t))
             tnp = set(g.predecessors(t))
             nns = set(g.successors(n))
@@ -363,7 +351,7 @@ class TwinWidthEncoding:
                         cc += 1
                 c_max = max(c_max, cc)
             cnt += 1
-        #print(f"Done {c_max}/{d}")
+
         od = [unmap[x] for x in od]
         mg = {unmap[x]: unmap[y] for x, y in mg.items()}
         return c_max, od, mg

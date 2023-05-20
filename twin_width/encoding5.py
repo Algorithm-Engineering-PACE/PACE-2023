@@ -1,11 +1,12 @@
 import time
+from threading import Timer
 
 from networkx import Graph
 from pysat.card import CardEnc, EncType
 from pysat.formula import CNF, IDPool
-from threading import Timer
-import tools
 
+import tools
+from logger import logger
 
 class TwinWidthEncoding2:
     def __init__(self, g, card_enc=EncType.totalizer):
@@ -151,7 +152,7 @@ class TwinWidthEncoding2:
         self.encode_counters(g, d)
         self.sb(n, d)
 
-        print(f"{len(self.formula.clauses)} / {self.formula.nv}")
+        logger.debug(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
 
     def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
@@ -159,7 +160,7 @@ class TwinWidthEncoding2:
         cb = start_bound
 
         if verbose:
-            print(f"Created encoding in {time.time() - start}")
+            logger.debug(f"Created encoding in {time.time() - start}")
 
         done = []
         c_slv = None
@@ -187,16 +188,16 @@ class TwinWidthEncoding2:
 
                 if slv.solve() if timeout == 0 else slv.solve_limited():
                     if verbose:
-                        print(f"Found {i}")
+                        logger.debug(f"Found {i}")
                     cb = self.decode(slv.get_model(), g, i)
                     i = cb - 1
                 else:
                     if verbose:
-                        print(f"Failed {i}")
+                        logger.debug(f"Failed {i}")
                     break
 
                 if verbose:
-                    print(f"Finished cycle in {time.time() - start}")
+                    logger.debug(f"Finished cycle in {time.time() - start}")
         if timer is not None:
             timer.cancel()
         return cb
@@ -217,26 +218,26 @@ class TwinWidthEncoding2:
             for j in range(1, len(g.nodes) + 1):
                 if model[self.ord[i][j]]:
                     if len(od) >= i:
-                        print("Double order")
+                        logger.error("Double order")
                     od.append(j)
                     unordered.remove(j)
             if len(od) < i:
-                print("Order missing")
+                logger.error("Order missing")
             if i < len(g.nodes) - d:
                 for c_node in od:
                     if not model[self.merged[c_node][i]]:
-                        print(f"Not merged, node {c_node} step {i}")
+                        logger.debug(f"Not merged, node {c_node} step {i}")
                 for c_node in unordered:
                     if model[self.merged[c_node][i]]:
-                        print(f"Merged, node {c_node} step {i}")
+                        logger.debug(f"Merged, node {c_node} step {i}")
         if len(set(od)) < len(od):
-            print("Node twice in order")
+            logger.error("Node twice in order")
 
         for i in range(1, len(g.nodes)):
             for j in range(i+1, len(g.nodes) + 1):
                 if model[self.merge[i][j]]:
                     if i in mg:
-                        print("Error, double merge!")
+                        logger.error("Error, double merge!")
                     mg[i] = j
 
         # Perform contractions, last node needs not be contracted...
@@ -274,12 +275,12 @@ class TwinWidthEncoding2:
                         u2, v2 = self.node_map[u], self.node_map[v]
                         u2, v2 = min(u2, v2), max(u2, v2)
                         if not model[self.red[step][u2][v2]]:
-                            print(f"Missing red edge in step {step}")
+                            logger.error(f"Missing red edge in step {step}")
 
                 if cc > d:
-                    print(f"Exceeded bound in step {step}")
+                    logger.error(f"Exceeded bound in step {step}")
                 c_max = max(c_max, cc)
 
             step += 1
-        print(f"Done {c_max}/{d}")
+        logger.debug(f"Done {c_max}/{d}")
         return c_max

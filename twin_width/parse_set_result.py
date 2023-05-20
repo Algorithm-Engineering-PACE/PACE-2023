@@ -3,6 +3,8 @@ import sys
 import tarfile as tf
 from collections import defaultdict
 
+from logger import logger
+
 results = defaultdict(dict)
 instances = []
 
@@ -70,5 +72,5 @@ for c_k in sorted(results_aggr.keys()):
             c_l += "&-&-"
     c_l += "\\\\"
     c_l = c_l.replace("_", "\_")
-    print(c_l)
-print("Done")
+    logger.debug(c_l)
+logger.debug("Done")

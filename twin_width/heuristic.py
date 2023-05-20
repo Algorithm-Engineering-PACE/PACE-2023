@@ -1,5 +1,6 @@
 from sys import maxsize
 
+from logger import logger
 
 def get_ub(g):
     od = []
@@ -118,7 +119,7 @@ def get_ub2(g):
                 if g[u][v]['red']:
                     cc += 1
             if cc != len(reds[u]):
-                print(f"mismatch {cc < len(reds[u])}")
+                logger.debug(f"mismatch {cc < len(reds[u])}")
             ub = max(ub, cc)
 
     return ub
@@ -207,7 +208,7 @@ def get_ub2_polarity(g):
                 if g[u][v]['red']:
                     cc += 1
             if cc != len(reds[u]):
-                print(f"mismatch {cc < len(reds[u])}")
+                logger.debug(f"mismatch {cc < len(reds[u])}")
             ub = max(ub, cc)
 
     return ub

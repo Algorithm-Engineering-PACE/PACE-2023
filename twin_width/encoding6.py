@@ -1,11 +1,12 @@
+import time
+
 from networkx import Graph
 from functools import cmp_to_key
 from pysat.formula import CNF, IDPool
 from pysat.card import ITotalizer, CardEnc, EncType
-import tools
-import subprocess
-import time
 
+import tools
+from logger import logger
 
 # TODO: Symmetry breaking: If two consecutive contractions have to node with red edges in common -> lex order
 class TwinWidthEncoding:
@@ -150,28 +151,28 @@ class TwinWidthEncoding:
         cb = start_bound
 
         if verbose:
-            print(f"Created encoding in {time.time() - start}")
+            logger.debug(f"Created encoding in {time.time() - start}")
         od = None
         mg = None
         with solver() as slv:
             slv.append_formula(formula)
             for i in range(start_bound, lb-1, -1):
                 if verbose:
-                    print(f"{slv.nof_clauses()}/{slv.nof_vars()}")
+                    logger.debug(f"{slv.nof_clauses()}/{slv.nof_vars()}")
                 if slv.solve(assumptions=self.get_card_vars(i)):
                     cb = i
                     if verbose:
-                        print(f"Found {i}")
+                        logger.debug(f"Found {i}")
                     if check:
                         mx, od, mg = self.decode(slv.get_model(), g, i, verbose)
                 else:
                     if verbose:
-                        print(f"Failed {i}")
-                        print(f"Finished cycle in {time.time() - start}")
+                        logger.debug(f"Failed {i}")
+                        logger.debug(f"Finished cycle in {time.time() - start}")
                     break
 
                 if verbose:
-                    print(f"Finished cycle in {time.time() - start}")
+                    logger.debug(f"Finished cycle in {time.time() - start}")
 
         for v in self.totalizer.values():
             for t in v.values():
@@ -256,7 +257,7 @@ class TwinWidthEncoding:
             for j in range(i+1, len(g.nodes) + 1):
                 if model[self.merge[i][j]]:
                     if i in mg:
-                        print("Error, double merge!")
+                        logger.error("Error, double merge!")
                     mg[i] = j
 
         od.sort(key=cmp_to_key(find_ord))
@@ -269,14 +270,14 @@ class TwinWidthEncoding:
         cnt = 0
         for i, n in enumerate(od[:-1]):
             if not model[self.merged[n][i+1]]:
-                print("Merge mismatch")
+                logger.debug("Merge mismatch")
             for n2 in od[i+1:]:
                 if model[self.merged[n2][i+1]]:
-                    print("Unmerged mismatch")
+                    logger.debug("Unmerged mismatch")
             t = unmap[mg[n]]
             n = unmap[n]
             if verbose:
-                print(f"{n} => {t}")
+                logger.debug(f"{n} => {t}")
             # graph_export, line_export = tools.dot_export(g, t, n)
             # with open(f"progress_{cnt}.dot", "w") as f:
             #     f.write(graph_export)
@@ -315,7 +316,6 @@ class TwinWidthEncoding:
 
                 c_max = max(c_max, cc)
             cnt += 1
-        #print(f"Done {c_max}/{d}")
         od = [unmap[x] for x in od]
         mg = {unmap[x]: unmap[y] for x, y in mg.items()}
         return c_max, od, mg
