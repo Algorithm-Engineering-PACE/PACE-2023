@@ -177,20 +177,19 @@ def delete_files_starting_with(prefix):
 
 def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False):
     ## our preprocessing
-    g = preprocessing.preproccess(graph)
-
-    if len(g.nodes) <= 1:
+    res = preprocessing.preproccess(graph)
+    g = res['output_graph']
+    if res.get("cograph"):
         logger.debug("Done, width: 0")
         return ({"instance_name": instance_name
-                        ,"num_of_nodes": g.number_of_nodes()
-                        ,"num_of_edges": g.number_of_edges()
+                        ,"num_of_nodes": graph.number_of_nodes()
+                        ,"num_of_edges": graph.number_of_edges()
                         ,"tww": 0
                         ,"elimination_ordering": None
-                        ,"contraction_tree": [] ##todo: handle contraction_tree 
+                        ,"contraction_tree": res['cograph']['contraction_tree']
                         ,"cycle_times": None
                         ,"duration": None
                                 })
-
     ub = heuristic.get_ub(g)
     ub2 = heuristic.get_ub2(g)
     logger.debug(f"UB {ub} {ub2}")
