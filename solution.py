@@ -23,7 +23,7 @@ def main(command):
 
 if __name__=='__main__':
     # Ensure packages are installed
-    install_packages()
+    #install_packages()
     if len(sys.argv) > 1:
         api_command = sys.argv[1]
         if api_command == "clean-results":
@@ -34,3 +34,4 @@ if __name__=='__main__':
     else:
         command = ['python3', 'main.py', 'proccess-graph-from-input']
     main(command)
+    
