@@ -260,6 +260,8 @@ class MyTwinWidthEncoding:
                                          [-self.vanished[i][k], -self.red_unvanished[i][j][k]],
                                          [self.red[j][k], -self.red_unvanished[i][j][k]]]
                     )
+                    self.formula.extend([[self.vanished[i][j], self.vanished[i][k],
+                                          self.red_unvanished[i][j][k], -self.red[j][k]]])
 
     def encode_counters(self, d):
         for i in range(self._parent_start_index, self.num_total_vertices + 1):
