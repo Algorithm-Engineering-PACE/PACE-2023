@@ -240,11 +240,11 @@ class MyTwinWidthEncoding:
                                          -self.left_edge[j][i], -self.right_edge[j][i]]
                 ])
 
-                self.formula.extend([[-self.red[j][i], -self.edge[j][i], -self.left_red[j][i]],
-                                     [-self.red[j][i], -self.edge[j][i], -self.right_red[j][i]],
-                                     [-self.red[j][i], -self.edge[j][i], -self.left_edge[j][i],
-                                         -self.right_edge[j][i]],
-                                     [-self.red[j][i], -self.edge[j][i], -self.right_edge[j][i],
+                self.formula.extend([[self.red[j][i], -self.edge[j][i], -self.left_red[j][i]],
+                                     [self.red[j][i], -self.edge[j][i], -self.right_red[j][i]],
+                                     [self.red[j][i], -self.edge[j][i], -self.left_edge[j][i],
+                                         self.right_edge[j][i]],
+                                     [self.red[j][i], -self.edge[j][i], -self.right_edge[j][i],
                                          self.left_edge[j][i]]
                 ])
 
