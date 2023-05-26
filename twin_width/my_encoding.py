@@ -124,7 +124,7 @@ class MyTwinWidthEncoding:
                 for p in range(self.max_parent_start_index(c), self.num_total_vertices + 1)
             ]
             parent_list = parent_left_list + parent_right_list
-            self.formula.extend(CardEnc.atmost(parent_list, vpool=self.pool, bound=1))
+            self.formula.extend(CardEnc.atmost(parent_list, vpool=self.pool, bound=1, encoding=self.card_enc))
 
         # every non-original vertex has exactly one left child
         # and one right child
