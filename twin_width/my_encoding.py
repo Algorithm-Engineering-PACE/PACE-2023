@@ -254,8 +254,6 @@ class MyTwinWidthEncoding:
         for i in range(self._parent_start_index, self.num_total_vertices + 1):
             for j in range(1, i + 1):
                 for k in range(j + 1, i + 1):
-                    if i == j:
-                        continue
                     self.formula.extend([[-self.vanished[i][j], -self.red_unvanished[i][j][k]],
                                          [-self.vanished[i][k], -self.red_unvanished[i][j][k]],
                                          [self.red[j][k], -self.red_unvanished[i][j][k]]]
@@ -328,7 +326,7 @@ class MyTwinWidthEncoding:
                     if verbose:
                         print(f"Found {i}")
                     # cb = self.decode(slv.get_model(), g, i)
-                    # i = cb - 1
+                    i = cb - 1
                 else:
                     if verbose:
                         print(f"Failed {i}")

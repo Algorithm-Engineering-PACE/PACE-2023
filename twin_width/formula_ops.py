@@ -27,7 +27,7 @@ def equiv(x: int, y):
     (x <=> y) is equivalent to (x => y) ^ (y => x)
     """
     if isinstance(x, int) and isinstance(y[0], int):
-        return [[-x, *y], *[[-z] for z in y]]
+        return [[-x, *y], *[[-z, x] for z in y]]
     elif isinstance(x, int) and isinstance(y[0], list):
         assert False
     else:
