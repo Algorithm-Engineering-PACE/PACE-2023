@@ -1,11 +1,12 @@
 import time
+from threading import Timer
 
 from networkx import Graph
 from pysat.card import CardEnc, EncType
 from pysat.formula import CNF, IDPool
-from threading import Timer
-import tools
 
+import tools
+from logger import logger
 
 class TwinWidthEncoding2:
     def __init__(self, g, card_enc=EncType.totalizer):
@@ -196,12 +197,8 @@ class TwinWidthEncoding2:
         self.encode_merge(n, d)
         self.encode_red(n, d)
         self.encode_counters(g, d)
-        #self.skip_doublehops(n, d)
-        #print(f"{len(self.formula.clauses)}")
 
-        #self.break_symmetry(n, d)
-        #self.encode_perf2(g, d)
-        print(f"{len(self.formula.clauses)} / {self.formula.nv}")
+        logger.debug(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
 
     def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
@@ -209,7 +206,7 @@ class TwinWidthEncoding2:
         cb = start_bound
 
         if verbose:
-            print(f"Created encoding in {time.time() - start}")
+            logger.debug(f"Created encoding in {time.time() - start}")
 
         done = []
         c_slv = None
@@ -237,16 +234,16 @@ class TwinWidthEncoding2:
 
                 if slv.solve() if timeout == 0 else slv.solve_limited():
                     if verbose:
-                        print(f"Found {i}")
+                        logger.debug(f"Found {i}")
                     cb = self.decode(slv.get_model(), g, i)
                     i = cb - 1
                 else:
                     if verbose:
-                        print(f"Failed {i}")
+                        logger.debug(f"Failed {i}")
                     break
 
                 if verbose:
-                    print(f"Finished cycle in {time.time() - start}")
+                    logger.debug(f"Finished cycle in {time.time() - start}")
         if timer is not None:
             timer.cancel()
         return cb
@@ -266,18 +263,18 @@ class TwinWidthEncoding2:
             for j in range(1, len(g.nodes) + 1):
                 if model[self.ord[i][j]]:
                     if len(od) >= i:
-                        print("Double order")
+                        logger.error("Double order")
                     od.append(j)
             if len(od) < i:
-                print("Order missing")
+                logger.error("Order missing")
         if len(set(od)) < len(od):
-            print("Node twice in order")
+            logger.error("Node twice in order")
 
         for i in range(1, len(g.nodes) + 1 - d):
             for j in range(i+1, len(g.nodes) + 1):
                 if model[self.merge[i][j]]:
                     if od[i-1] in mg:
-                        print("Error, double merge!")
+                        logger.error("Error, double merge!")
                     mg[od[i-1]] = od[j-1]
 
         # Check edges relation...
@@ -285,9 +282,9 @@ class TwinWidthEncoding2:
             for j in range(i+1, len(g.nodes)-d):
                 if model[self.edge[i+1][j+1]] ^ g.has_edge(unmap[od[i]], unmap[od[j]]):
                     if model[self.edge[i+1][j+1]]:
-                        print(f"Edge error: Unknown edge in model {i+1}, {j+1} = {od[i], od[j]}")
+                        logger.error(f"Edge error: Unknown edge in model {i+1}, {j+1} = {od[i], od[j]}")
                     else:
-                        print("Edge error: Edge not in model")
+                        logger.error("Edge error: Edge not in model")
 
         # Perform contractions, last node needs not be contracted...
         for u, v in g.edges:
@@ -324,12 +321,12 @@ class TwinWidthEncoding2:
                         u2, v2 = od.index(self.node_map[u]) + 1, od.index(self.node_map[v]) + 1
                         u2, v2 = min(u2, v2), max(u2, v2)
                         if not model[self.red[step][u2][v2]]:
-                            print(f"Missing red edge in step {step}")
+                            logger.error(f"Missing red edge in step {step}")
                 if cc > d:
-                    print(f"Exceeded bound in step {step}")
+                    logger.error(f"Exceeded bound in step {step}")
                 c_max = max(c_max, cc)
 
             step += 1
-        print(f"Done {c_max}/{d}")
+        logger.debug(f"Done {c_max}/{d}")
 
         return c_max

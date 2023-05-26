@@ -3,7 +3,11 @@ import subprocess
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
+
 import pysat.solvers as slv
+from pandas import DataFrame
+import typer
 
 import twin_width.encoding as encoding
 import twin_width.encoding_signed_bipartite as encoding_signed_bipartite
@@ -11,9 +15,11 @@ import twin_width.heuristic as heuristic
 import twin_width.parser as parser
 import preprocessing
 import tools
-from pathlib import Path
-from pandas import DataFrame
-import typer
+from logger import logger
+
+
+from networkx import graph
+
 
 app = typer.Typer()
 BASE_PATH = Path(__file__).parent
@@ -26,21 +32,44 @@ def clean_results():
 def process_graphs_from_dir(instance_path: Path, start: int =0, to: int=-1):
 
     instance_path = (BASE_PATH / instance_path).resolve()
-
     if not os.path.exists(instance_path):
-        print(f"folder is not exists {instance_path}")
+        logger.error(f"folder is not exists {instance_path}")
     files = sorted(os.listdir(instance_path))
     filter(lambda file_name: file_name.endswith(".gr"), files)
     results = []
     for file_name in files:
-        process_file(instance_path, file_name, results=results)
+        res = process_file(instance_path, file_name, save_result_to_csv=False)
+        results.append(res)
+    
+    df = DataFrame().from_records(results)
+    results_file_name = (BASE_PATH /
+        f"results_tww_{datetime.now()}.csv").resolve()
+    df.to_csv(results_file_name)
 
 @app.command()
 def process_graph_from_instance(file_name: Path):
     process_file(BASE_PATH, file_name)
 
-def process_file(instance_path: Path, file_name: str | Path,
-    csv_time: datetime=datetime.now(), results: list=[]):
+@app.command()
+def proccess_graph_from_input():
+    g = parser.parse_stdin()
+    result = process_graph(g.copy())
+    contraction_tree = dict(result).get("contraction_tree")
+    num_of_nodes = dict(result).get("num_of_nodes")
+    if contraction_tree and num_of_nodes:
+        if len(contraction_tree) == int(num_of_nodes) - 1:
+            ## y is contracted to x
+            for y,x in dict(contraction_tree).items():
+                print(f"{x} {y}", flush=True)                    
+        else:
+            logger.error("contraction tree is not valid - number of contraction != num_of_nodes - 1")
+    else:
+        logger.error("result is not valid")
+   
+        
+
+def process_file(instance_path: Path, file_name: str ,
+    save_result_to_csv = True,save_pace_output = True):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
 
     output_graphs = False
@@ -51,51 +80,14 @@ def process_file(instance_path: Path, file_name: str | Path,
         g = parser.parse_cnf(file_name)
         ub = heuristic.get_ub2_polarity(g)
 
-        print(f"UB {ub}")
+        logger.debug(f"UB {ub}")
         start = time.time()
 
         enc = encoding_signed_bipartite.TwinWidthEncoding()
         cb = enc.run(g, slv.Cadical103, ub)
     else:
         g = parser.parse(instance_file_name)[0]
-
-        ## our preprocessing
-        g = preprocessing.preproccess(g)
-
-        if len(g.nodes) <= 1:
-            print("Done, width: 0")
-            results.append({"instance_name": file_name
-                            ,"# nodes": g.number_of_nodes()
-                            ,"# edges": g.number_of_edges()
-                            ,"tww": 0
-                            ,"elimination_ordering": None
-                            ,"contraction_tree": None
-                            ,"cycle_times": None
-                            ,"duration": None
-                                    })
-            return
-
-        ub = heuristic.get_ub(g)
-        ub2 = heuristic.get_ub2(g)
-        print(f"UB {ub} {ub2}")
-        ub = min(ub, ub2)
-
-        start = time.time()
-        enc = encoding.TwinWidthEncoding()
-        cb = enc.run(g, slv.Cadical103, ub)
-
-    duration = time.time() - start
-    print(f"Finished, result: {cb}")
-    results.append({"instance_name": file_name
-                    ,"# nodes": g.number_of_nodes()
-                    ,"# edges": g.number_of_edges()
-                    ,"tww": cb[0]
-                    ,"elimination_ordering": cb[1]
-                    ,"contraction_tree": cb[2]
-                    ,"cycle_times": cb[3]
-                    ,"duration": duration
-                            })
-
+        result = process_graph(g,file_name)
     if output_graphs:
             instance_name = os.path.split(instance_file_name)[-1]
             mg = cb[2]
@@ -152,11 +144,18 @@ def process_file(instance_path: Path, file_name: str | Path,
                 for u in list(g.predecessors(n)):
                     g.remove_edge(u, n)
                 g.nodes[n]["del"] = True
-
-    df =  DataFrame().from_records(results)
-    results_file_name = (BASE_PATH /
-        f"results_tww_{csv_time}.csv").resolve()
-    df.to_csv(results_file_name)
+    
+    if save_result_to_csv:
+        df = DataFrame().from_records([result])
+        results_file_name = (BASE_PATH /
+            f"results_tww_{datetime.now()}.csv").resolve()
+        df.to_csv(results_file_name)
+    if save_pace_output:
+        contraction_tree = [f"{x} {y}\n" for y,x in dict(result['contraction_tree'] ).items()]
+        pace_output_file_name =  (BASE_PATH /  (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
+        with open(pace_output_file_name, 'w') as file:
+                file.writelines(contraction_tree)
+    return result
 
 def delete_files_starting_with(prefix):
     """
@@ -172,9 +171,45 @@ def delete_files_starting_with(prefix):
             file_path = os.path.join(current_directory, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
-                print(f"Deleted: {file_path}")
+                logger.debug(f"Deleted: {file_path}")
             else:
-                print(f"Skipping non-file: {file_path}")
+                logger.debug(f"Skipping non-file: {file_path}")
+
+def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False):
+    ## our preprocessing
+    res = preprocessing.preproccess(graph)
+    g = res['output_graph']
+    if res.get("cograph"):
+        logger.debug("Done, width: 0")
+        return ({"instance_name": instance_name
+                        ,"num_of_nodes": graph.number_of_nodes()
+                        ,"num_of_edges": graph.number_of_edges()
+                        ,"tww": 0
+                        ,"elimination_ordering": None
+                        ,"contraction_tree": res['cograph']['contraction_tree']
+                        ,"cycle_times": None
+                        ,"duration": None
+                                })
+    ub = heuristic.get_ub(g)
+    ub2 = heuristic.get_ub2(g)
+    logger.debug(f"UB {ub} {ub2}")
+    ub = min(ub, ub2)
+
+    start = time.time()
+    enc = encoding.TwinWidthEncoding()
+    cb = enc.run(g, slv.Cadical103, ub)
+
+    duration = time.time() - start
+    logger.debug(f"Finished, result: {cb}")
+    return({"instance_name": instance_name
+                    ,"num_of_nodes": g.number_of_nodes()
+                    ,"num_of_edges": g.number_of_edges()
+                    ,"tww": cb[0]
+                    ,"elimination_ordering": cb[1]
+                    ,"contraction_tree": cb[2]
+                    ,"cycle_times": cb[3]
+                    ,"duration": duration
+                            })
 
 
 

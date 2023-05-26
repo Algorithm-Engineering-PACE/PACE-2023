@@ -1,12 +1,14 @@
+import time
+from operator import itemgetter
+
 from networkx import Graph, connected_components, is_connected, subgraph
-import twin_width.heuristic as heuristic
 from functools import cmp_to_key
 from pysat.formula import CNF, IDPool
 from pysat.card import ITotalizer, CardEnc, EncType
+
 import twin_width.tools as tools
-import subprocess
-import time
-from operator import itemgetter
+import twin_width.heuristic as heuristic
+from logger import logger
 
 
 # TODO: Symmetry breaking: If two consecutive contractions have to node with red edges in common -> lex order
@@ -128,7 +130,7 @@ class TwinWidthEncoding:
 
     def run_instance(self, g, solver, start_bound, verbose=True, check=True, lb=0):
         if len(g.nodes) == 1:
-            print("Done, width: 0")
+            logger.debug("Done, width: 0")
             return 0, None, None, time.time() - time.time()
 
         times = {}
@@ -136,30 +138,30 @@ class TwinWidthEncoding:
         formula = self.encode(g, start_bound)
         cb = start_bound
         if verbose:
-            print(f"Created encoding in {time.time() - start}")
+            logger.debug(f"Created encoding in {time.time() - start}")
         od = None
         mg = None
         with solver() as slv:
             slv.append_formula(formula)
             for i in range(start_bound, lb-1, -1):
                 if verbose:
-                    print(f"{slv.nof_clauses()}/{slv.nof_vars()}")
+                    logger.debug(f"{slv.nof_clauses()}/{slv.nof_vars()}")
                 if slv.solve(assumptions=self.get_card_vars(i)):
                     cb = i
                     if verbose:
-                        print(f"Found {i}")
+                        logger.debug(f"Found {i}")
                     if check:
                         mx, od, mg = self.decode(slv.get_model(), g, i, verbose)
                 else:
                     if verbose:
-                        print(f"Failed {i}")
-                        print(f"Finished cycle in {time.time() - start}")
+                        logger.debug(f"Failed {i}")
+                        logger.debug(f"Finished cycle in {time.time() - start}")
                         times[i] = time.time() - start
                     break
 
                 if verbose:
                     times[i] = time.time() - start
-                    print(f"Finished cycle in {time.time() - start}")
+                    logger.debug(f"Finished cycle in {time.time() - start}")
 
 
         for v in self.totalizer.values():
@@ -266,7 +268,7 @@ class TwinWidthEncoding:
             for j in range(i+1, len(g.nodes) + 1):
                 if model[self.merge[i][j]]:
                     if i in mg:
-                        print("Error, double merge!")
+                        logger.error("Error, double merge!")
                     mg[i] = j
 
         od.sort(key=cmp_to_key(find_ord))
@@ -281,18 +283,7 @@ class TwinWidthEncoding:
             t = unmap[mg[n]]
             n = unmap[n]
             if verbose:
-                print(f"{n} => {t}")
-            # graph_export, line_export = tools.dot_export(g, t, n)
-            # with open(f"progress_{cnt}.dot", "w") as f:
-            #     f.write(graph_export)
-            # with open(f"progress_{cnt}.png", "w") as f:
-            #     subprocess.run(["dot", "-Kfdp", "-Tpng", f"progress_{cnt}.dot"], stdout=f)
-
-            # with open(f"line_{cnt}.dot", "w") as f:
-            #     f.write(line_export)
-            # with open(f"line_{cnt}.png", "w") as f:
-            #     subprocess.run(["dot", "-Tpng", f"line_{cnt}.dot"], stdout=f)
-
+                logger.debug(f"{n} => {t}")
 
             tn = set(g.neighbors(t))
             tn.discard(n)
@@ -319,9 +310,8 @@ class TwinWidthEncoding:
                         cc += 1
                 c_max = max(c_max, cc)
             cnt += 1
-        #print(f"Done {c_max}/{d}")
         od = [unmap[x] for x in od]
         mg = {unmap[x]: unmap[y] for x, y in mg.items()}
         if c_max > d:
-            print(f"Error: Bound exceeded {c_max}/{d}")
+            logger.error(f"Error: Bound exceeded {c_max}/{d}")
         return c_max, od, mg

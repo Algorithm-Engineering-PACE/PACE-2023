@@ -1,7 +1,9 @@
 from operator import itemgetter
 from itertools import combinations
 
+
 from heuristic import get_ub, get_open_neighberhood_without_node
+from logger import logger
 
 
 def get_naive(g):
@@ -11,7 +13,7 @@ def get_naive(g):
         g[u][v]['red'] = False
     naive_result = helper(g, ub)
     if naive_result == (-1, {}, []):
-        print("upper bound was tight!")
+        logger.debug("upper bound was tight!")
         return ub, mg, od
     return naive_result
 
@@ -65,7 +67,7 @@ def helper(g, ub):
         c_max = get_red_degree(g)
 
         if c_max >= ub:
-            print(
+            logger.debug(
                 f"Not exploring due to ub the following edge in search tree {u} - {v},{c_max} left nodes: {len(g.nodes)}")
             continue  # Optimization
 

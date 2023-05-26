@@ -5,6 +5,7 @@ import networkx as nx
 from pysat.card import CardEnc
 from pysat.formula import CNF
 
+from logger import logger
 
 def amo_commander(vars, vpool, m=2):
     formula = CNF()
@@ -121,13 +122,6 @@ def find_modules(g):
     for _ in range(0, len(g.nodes)):
         m = _find_modules(g, ordering)
         if len(m) < len(g.nodes):
-            # for x in m:
-            #     if len(x) > 1:
-            #         xs = set(x)
-            #         nbs = [set(g.neighbors(cx)) - xs for cx in x]
-            #
-            #         if not all(cx == nbs[0] for cx in nbs):
-            #             print("ERROR")
             return m
         ordering.insert(0, ordering.pop())
 
@@ -239,7 +233,6 @@ def check_result(g, od, mg):
                     cc += 1
             c_max = max(c_max, cc)
         cnt += 1
-    # print(f"Done {c_max}/{d}")
     return c_max
 
 
@@ -356,7 +349,7 @@ def solve_grid2(d1, d2, ub):
         if check_result(g, od, mg) > ub:
             raise RuntimeError("Invalid solution found")
         for c_n in od:
-            print(f"{c_n}: {mg[c_n]}")
+            logger.debug(f"{c_n}: {mg[c_n]}")
         return True
 
     return False
@@ -420,7 +413,6 @@ def solve_grid2_(d1, d2, ub, adj, contracted, od, mg, counts, target):
 
         od.pop()
         contracted[cc] = False
-    #print(f"{len(od)}")
     return False
 
 
@@ -523,6 +515,6 @@ def solve_quick_(adj, nbs, contracted, od, mg, ub, counts):
                             adj[ce1][ce2] = p
                             counts[ce1] -= 1
                     else:
-                        print(f"Conflict {len(od)}")
+                        logger.error(f"Conflict {len(od)}")
 
     return best

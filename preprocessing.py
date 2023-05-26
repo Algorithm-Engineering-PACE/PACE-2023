@@ -1,6 +1,7 @@
 from enum import Enum
 import networkx as nx
-
+import copy
+import tools
 
 ## sagemath implementation for graph modular decomposition 
 
@@ -805,9 +806,81 @@ def create_graph_from_prime_g(md_tree,graph):
 
  # this function is used before calculating tww 
 
+def create_contraction_tree_for_cograph(root,graph,contraction_tree):
+    if root.node_type == NodeType.NORMAL:
+        return
+    elif root.node_type == NodeType.SERIES:
+        test(root,graph,contraction_tree)
+    else:
+        for child in root.children:
+            create_contraction_tree_for_cograph(child,graph,contraction_tree)
+        # //function 
+          ## y is contracted to x
+           # for y,x in dict(contraction_tree).items():
+            #    print(f"{x} {y}", flush=True)     
+
+
+def delete_node_from_tree(root,node):
+    if node in root.children:
+        list(root.children).remove(node)
+    elif root.node_type ==  NodeType.NORMAL:
+        return
+    else:
+        for child in root.children:
+            delete_node_from_tree(child.node)
+        
+
+def my_test(node,graph,contraction_tree):
+    if node.node_type == NodeType.NORMAL:
+        return
+
+    for child in node.children:
+        my_test(child,graph,contraction_tree)
+
+    ver = get_vertices(node)
+    nodes_to_remove = []
+    for i in range(1,len(ver)):
+        contraction_tree[ver[i]] = ver[0]
+        nodes_to_remove.append(node.children[i])
+    node.children = [node.children[0]]
+    # for node_ in nodes_to_remove:
+    #     list(node.children).remove(node_)
+
+        
+        
+        #delete_node_from_tree(ver[i])
+
+
+
+def test(node,graph,contraction_tree):
+    parallel_nodes = list(filter(lambda c: c.node_type == NodeType.PARALLEL,node.children))
+    normal_nodes = list(filter(lambda c: c.node_type == NodeType.NORMAL,node.children))
+    if parallel_nodes and normal_nodes:
+        for p_node in parallel_nodes:
+            for i in range(1,len(p_node.children)):
+               contraction_tree[p_node.children[i].children[0]] = p_node.children[0].children[0]
+            last_val = list(contraction_tree.values())[-1]
+            contraction_tree[normal_nodes[0].children[0]] = last_val
+    elif not parallel_nodes and normal_nodes:
+        for i in range(1,len(normal_nodes)):
+            contraction_tree[normal_nodes[i].children[0]] = normal_nodes[0].children[0]
+
+        
+           
+
 def preproccess(graph):
-    output_graph = graph 
+    res = {}
+    res['output_graph'] = graph 
     md_tree = habib_maurer_algorithm(graph)
     if not is_prime(md_tree,graph):
-        output_graph = create_graph_from_prime_g(md_tree,graph)  
-    return output_graph
+        output_graph = create_graph_from_prime_g(md_tree,graph)
+        res['output_graph'] = output_graph
+        ##Check if graph is a cograph 
+        if output_graph.number_of_nodes() == 0:
+            contraction_tree = {}
+            my_test(md_tree,copy.deepcopy(graph),contraction_tree)
+            #create_contraction_tree_for_cograph(md_tree,copy.deepcopy(graph),contraction_tree)
+            res['cograph'] = {'contraction_tree': contraction_tree}
+    return res
+
+
