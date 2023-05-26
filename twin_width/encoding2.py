@@ -4,19 +4,19 @@ from networkx import Graph
 from pysat.card import CardEnc, EncType
 from pysat.formula import CNF, IDPool
 from threading import Timer
-import tools
+import twin_width.tools as tools
 
 
 class TwinWidthEncoding2:
     def __init__(self, g, card_enc=EncType.totalizer):
         self.edge = None
+        self.merge_ord = None
         self.ord = None
         self.merge = None
         self.node_map = None
         self.pool = None
         self.formula = None
         self.totalizer = None
-        self.g = g
         self.card_enc = card_enc
 
     def remap_graph(self, g):
@@ -38,6 +38,7 @@ class TwinWidthEncoding2:
 
     def init_var(self, g, d):
         self.edge = [{} for _ in range(0, len(g.nodes) + 1)]
+        self.merge_ord = [{} for _ in range(0, len(g.nodes) + 1)]
         self.red = [[{} for _ in range(0, len(g.nodes) + 1)] for _ in range(0, len(g.nodes) + 1)]
         self.ord = [{} for _ in range(0, len(g.nodes) + 1)]
         self.merge = [{} for _ in range(0, len(g.nodes) + 1)]
@@ -46,11 +47,12 @@ class TwinWidthEncoding2:
             for j in range(1, len(g.nodes) + 1):
                 self.ord[i][j] = self.pool.id(f"ord{i}_{j}")
 
-            for j in range(i + 1, len(g.nodes) + 1):
+
+            for j in range(i, len(g.nodes) + 1):
                 self.edge[i][j] = self.pool.id(f"edge{i}_{j}")
                 if i <= len(g.nodes) - d:
                     self.merge[i][j] = self.pool.id(f"merge{i}_{j}")
-
+                    self.merge_ord[i][j] = self.pool.id(f"merge_ord{i}_{j}")
                     for k in range(j+1, len(g.nodes) + 1):
                         self.red[i][j][k] = self.pool.id(f"red{i}_{j}_{k}")
 
@@ -183,7 +185,7 @@ class TwinWidthEncoding2:
         for i in range(1, len(g.nodes)-d+1):  # As last one is the root, no counter needed
             for x in range(i+1, len(g.nodes) + 1):
                 vars = [tred(i, x, y) for y in range(i+1, len(g.nodes)+1) if x != y]
-                self.formula.extend(CardEnc.atmost(vars, bound=d, vpool=self.pool, encoding=self.card_enc))
+                self.formula.extend(CardEnc.atmost(vars, bound=d, vpool=self.pool, encoding=EncType.totalizer))
 
     def encode(self, g, d):
         g = self.remap_graph(g)
@@ -207,7 +209,8 @@ class TwinWidthEncoding2:
     def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
         start = time.time()
         cb = start_bound
-
+        od = mg = None
+        times = {}
         if verbose:
             print(f"Created encoding in {time.time() - start}")
 
@@ -224,7 +227,7 @@ class TwinWidthEncoding2:
             timer.start()
 
         i = start_bound
-        while i >= 0:
+        while i > 0:
             if done:
                 break
             with solver() as slv:
@@ -238,18 +241,24 @@ class TwinWidthEncoding2:
                 if slv.solve() if timeout == 0 else slv.solve_limited():
                     if verbose:
                         print(f"Found {i}")
-                    cb = self.decode(slv.get_model(), g, i)
+                    cb, od, mg = self.decode(slv.get_model(), g, i)
                     i = cb - 1
                 else:
                     if verbose:
                         print(f"Failed {i}")
+                        times[i] = time.time() - start
                     break
 
                 if verbose:
                     print(f"Finished cycle in {time.time() - start}")
+                    times[i] = time.time() - start
         if timer is not None:
             timer.cancel()
-        return cb
+
+        if od is None:
+            return cb, None, None, None
+        else:
+            return cb, od, mg, times
 
     def decode(self, model, g, d):
         g = g.copy()
@@ -273,11 +282,11 @@ class TwinWidthEncoding2:
         if len(set(od)) < len(od):
             print("Node twice in order")
 
-        for i in range(1, len(g.nodes) + 1 - d):
+        for i in range(1, len(g.nodes) + 1 - d): #i is from the output ordering index,
             for j in range(i+1, len(g.nodes) + 1):
-                if model[self.merge[i][j]]:
+                if model[self.merge[i][j]]: #  j is the paranet of i
                     if od[i-1] in mg:
-                        print("Error, double merge!")
+                        print(f"{i},{j}, {od},{mg} Error, double merge!")
                     mg[od[i-1]] = od[j-1]
 
         # Check edges relation...
@@ -332,4 +341,4 @@ class TwinWidthEncoding2:
             step += 1
         print(f"Done {c_max}/{d}")
 
-        return c_max
+        return c_max, od, mg
