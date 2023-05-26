@@ -5,7 +5,9 @@ import time
 from datetime import datetime
 import pysat.solvers as slv
 
-import twin_width.encoding_eval as encoding
+
+
+import twin_width.my_encoding as encoding
 import twin_width.encoding_signed_bipartite as encoding_signed_bipartite
 import twin_width.heuristic as heuristic
 import twin_width.parser as parser
@@ -14,6 +16,7 @@ import tools
 from pathlib import Path
 from pandas import DataFrame
 import typer
+import networkx as nx
 
 from pysat.card import EncType
 
@@ -32,7 +35,7 @@ def process_graphs_from_dir(instance_path: Path, start: int =0, to: int=-1):
     if not os.path.exists(instance_path):
         print(f"folder is not exists {instance_path}")
     files = sorted(os.listdir(instance_path))
-    filter(lambda file_name: file_name.endswith(".gr"), files)
+    files = filter(lambda file_name: file_name.endswith(".gr"), files)
     results = []
     for file_name in files:
         process_file(instance_path, file_name, results=results)
@@ -45,6 +48,7 @@ def process_file(instance_path: Path, file_name: str | Path,
     csv_time: datetime=datetime.now(), results: list=[]):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
 
+    print(f"processing file {file_name}....")
     output_graphs = False
     if any(x == "-l" for x in sys.argv[1:-1]):
         output_graphs = True
@@ -83,7 +87,9 @@ def process_file(instance_path: Path, file_name: str | Path,
         ub = min(ub, ub2)
 
         start = time.time()
-        enc = encoding.EncodingEvaluator(EncType.native)
+
+
+        enc = encoding.MyTwinWidthEncoding(g, ub)
         cb = enc.run(g, slv.Cadical103, ub)
 
     duration = time.time() - start
@@ -178,7 +184,47 @@ def delete_files_starting_with(prefix):
             else:
                 print(f"Skipping non-file: {file_path}")
 
+@app.command()
+def custom_graph():
+    ## our preprocessing
+    results = []
+    g = nx.path_graph(4)
+    g = preprocessing.preproccess(g)
 
+    if len(g.nodes) <= 1:
+        print("Done, width: 0")
+        results.append({"instance_name": "custom"
+                        ,"# nodes": g.number_of_nodes()
+                        ,"# edges": g.number_of_edges()
+                        ,"tww": 0
+                        ,"elimination_ordering": None
+                        ,"contraction_tree": None
+                        ,"cycle_times": None
+                        ,"duration": None
+                                })
+        return
+
+    ub = heuristic.get_ub(g)
+    ub2 = heuristic.get_ub2(g)
+    print(f"UB {ub} {ub2}")
+    ub = min(ub, ub2)
+
+    start = time.time()
+    enc = encoding.MyTwinWidthEncoding(g, ub)
+    cb = enc.run(g, slv.Cadical103, ub)
+
+    duration = time.time() - start
+    print(f"Finished, result: {cb}")
+    results.append({"instance_name": "custom"
+                    ,"# nodes": g.number_of_nodes()
+                    ,"# edges": g.number_of_edges()
+                    ,"tww": cb[0]
+                    ,"elimination_ordering": cb[1]
+                    ,"contraction_tree": cb[2]
+                    ,"cycle_times": cb[3]
+                    ,"duration": duration
+                            })
+    return results
 
 if __name__ == "__main__":
     app()
