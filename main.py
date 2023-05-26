@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -15,7 +16,10 @@ from pathlib import Path
 from pandas import DataFrame
 import typer
 import networkx as nx
+import matplotlib.pyplot as plt
 
+
+logging.basicConfig(level=logging.WARNING)
 app = typer.Typer()
 BASE_PATH = Path(__file__).parent
 
@@ -63,6 +67,7 @@ def process_file(instance_path: Path, file_name: str | Path,
 
         ## our preprocessing
         g = preprocessing.preproccess(g)
+        logging.debug(f"nodes of g: {g.nodes}")
 
         if len(g.nodes) <= 1:
             print("Done, width: 0")
@@ -83,6 +88,7 @@ def process_file(instance_path: Path, file_name: str | Path,
         ub = min(ub, ub2)
 
         start = time.time()
+        logging.debug(f"ub before encoding init = {ub}")
         enc = encoding.MyTwinWidthEncoding(g, ub)
         cb = enc.run(g, slv.Cadical103, ub)
 

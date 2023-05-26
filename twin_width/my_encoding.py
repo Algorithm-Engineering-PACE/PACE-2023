@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import List, Dict, Optional
 
@@ -6,6 +7,8 @@ from pysat.card import CardEnc, EncType
 from pysat.formula import CNF, IDPool
 from threading import Timer
 import twin_width.formula_ops as fops
+# import networkx as nx
+# import matplotlib.pyplot as plt
 
 
 class MyTwinWidthEncoding:
@@ -20,9 +23,14 @@ class MyTwinWidthEncoding:
         self.card_enc = card_enc
 
         self.num_original_vertices = len(g.nodes)
-        self.num_total_vertices = 2 * len(g.nodes) - d - 2
+        self.num_total_vertices = (2 * len(g.nodes)) - d - 2
         self._parent_start_index = len(g.nodes) + 1
-        self.child_end_index = 2 * len(g.nodes) - d - 3
+        self.child_end_index = (2 * len(g.nodes)) - d - 3
+
+    def update_num_vertices(self, g, d):
+        self.num_total_vertices = (2 * len(g.nodes)) - d - 2
+        self.child_end_index = (2 * len(g.nodes)) - d - 3
+
 
     def remap_graph(self, g):
         self.node_map = {}
@@ -114,7 +122,7 @@ class MyTwinWidthEncoding:
     # and one right child
     def encode_parent_child(self):
         # every child has at most one parent
-        for c in range(1, self.child_end_index):
+        for c in range(1, self.child_end_index+1):
             parent_left_list = [
                 self.left_child[p][c]
                 for p in range(self.max_parent_start_index(c), self.num_total_vertices + 1)
@@ -282,7 +290,11 @@ class MyTwinWidthEncoding:
                     self.formula.append([-self.left_child[i][j], -self.right_child[i][k]])
 
     def encode(self, g, d):
+        self.update_num_vertices(g, d)
         g = self.remap_graph(g)
+        #nx.draw(g, with_labels=True)
+        #plt.savefig('graph.png')
+
         self.pool = IDPool()
         self.formula = CNF()
         self.init_var(g, d)
@@ -297,6 +309,8 @@ class MyTwinWidthEncoding:
         return self.formula
 
     def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
+        logging.basicConfig(level=logging.DEBUG)
+        logging.debug(f"len(g.nodes) = {len(g.nodes)}")
         start = time.time()
         cb = start_bound
 
@@ -322,16 +336,20 @@ class MyTwinWidthEncoding:
                 break
             with solver() as slv:
                 c_slv = slv
+                logging.debug(f"len(g.nodes) before encoding = {len(g.nodes)}")
+                logging.debug(f"i before encoding = {i}")
                 formula = self.encode(g, i)
+                logging.debug(f"self.num_total_vertices = {self.num_total_vertices}")
                 slv.append_formula(formula)
 
                 if done:
                     break
 
                 if slv.solve() if timeout == 0 else slv.solve_limited():
+                    model = slv.get_model()
+                    elim_order = self.elim_order(model, i)
                     if verbose:
                         print(f"Found {i}")
-                    # cb = self.decode(slv.get_model(), g, i)
                     i = cb =  cb - 1
                 else:
                     cb += 1
@@ -343,9 +361,62 @@ class MyTwinWidthEncoding:
                     print(f"Finished cycle in {time.time() - start}")
         if timer is not None:
             timer.cancel()
-        if cb == 0: # note that twin-width 0 case is taken care of seperately in main
+        if cb == 0:  # note that twin-width 0 case is taken care of seperately in main
             cb = 1
-        return cb, None, None, time.time() - start
+        return cb, elim_order, None, time.time() - start
+    
+    def elim_order(self, model, d):
+        model = {abs(x): x > 0 for x in model}
+        num_parents = self.num_total_vertices-self.num_original_vertices
+        node_id = [*range(self.num_original_vertices+1)]+[0]*(num_parents)
+        children_ids = [(0, 0)]*(self.num_total_vertices+2)
+        parent = [0]*(self.num_total_vertices+2)
+        logging.debug(f"self.num_total_vertices = {self.num_total_vertices}")
+
+        for i in range(self._parent_start_index, self.num_total_vertices+1):
+            left = right = 0
+            for j in range(1, i):
+                if model[self.left_child[i][j]]:
+                    if(left > 0):
+                        print(f"Two left childs for {i}")
+                        return None
+                    left = j
+                    if parent[j]:
+                        print(f"Two parents for {j} namely {parent[j]} and {i}")
+                        return None
+                    parent[j] = i
+                if model[self.right_child[i][j]]:
+                    if(right > 0):
+                        print(f"Two right childs for {i}")
+                        return None
+                    right = j
+                    if parent[j]:
+                        print(f"Two parents for {j} namely {parent[j]} and {i}")
+                        print(f"left child of {i} is {left} and right child of {i} is {right}")
+                        return None
+                    parent[j] = i
+            if left == 0:
+                print(f"no left child for {i} ")
+                return None
+            if right == 0:
+                print(f"no right child for {i} ")
+                return None
+            children_ids[i] = (node_id[left], node_id[right])
+            node_id[i] = node_id[left]
+        roots_ids = [node_id[i] for i in range(1, self.num_total_vertices+1) if not parent[i]]
+        if(len(roots_ids) != d+2):
+            print(f"Number of uncontracted vertices is {len(roots_ids)} but expected {d+2}")
+            print(f"parents:{parent}")
+            return None
+        logging.debug(f"uncontracted vertices ids: {roots_ids}")
+        root1_id = roots_ids[0]
+        final_contractions = []
+        for i in range(1, len(roots_ids)):
+            final_contractions.append((root1_id, roots_ids[i]))
+        return children_ids[self._parent_start_index:self.num_total_vertices] + final_contractions
+
+
+
 
     def decode(self, model, g, d):
         g = g.copy()
