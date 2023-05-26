@@ -5,8 +5,6 @@ import time
 from datetime import datetime
 import pysat.solvers as slv
 
-
-
 import twin_width.my_encoding as encoding
 import twin_width.encoding_signed_bipartite as encoding_signed_bipartite
 import twin_width.heuristic as heuristic
@@ -17,8 +15,6 @@ from pathlib import Path
 from pandas import DataFrame
 import typer
 import networkx as nx
-
-from pysat.card import EncType
 
 app = typer.Typer()
 BASE_PATH = Path(__file__).parent
@@ -87,8 +83,6 @@ def process_file(instance_path: Path, file_name: str | Path,
         ub = min(ub, ub2)
 
         start = time.time()
-
-
         enc = encoding.MyTwinWidthEncoding(g, ub)
         cb = enc.run(g, slv.Cadical103, ub)
 
