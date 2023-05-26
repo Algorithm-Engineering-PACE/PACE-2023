@@ -23,9 +23,9 @@ class MyTwinWidthEncoding:
         self.card_enc = card_enc
 
         self.num_original_vertices = len(g.nodes)
-        self.num_total_vertices = (2 * len(g.nodes)) - d - 2
+        self.num_total_vertices = 2 * len(g.nodes) - d - 2
         self._parent_start_index = len(g.nodes) + 1
-        self.child_end_index = (2 * len(g.nodes)) - d - 3
+        self.child_end_index = 2 * len(g.nodes) - d - 3
 
     def update_num_vertices(self, g, d):
         self.num_total_vertices = (2 * len(g.nodes)) - d - 2
@@ -309,8 +309,6 @@ class MyTwinWidthEncoding:
         return self.formula
 
     def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
-        logging.basicConfig(level=logging.DEBUG)
-        logging.debug(f"len(g.nodes) = {len(g.nodes)}")
         start = time.time()
         cb = start_bound
 
@@ -336,10 +334,7 @@ class MyTwinWidthEncoding:
                 break
             with solver() as slv:
                 c_slv = slv
-                logging.debug(f"len(g.nodes) before encoding = {len(g.nodes)}")
-                logging.debug(f"i before encoding = {i}")
                 formula = self.encode(g, i)
-                logging.debug(f"self.num_total_vertices = {self.num_total_vertices}")
                 slv.append_formula(formula)
 
                 if done:
@@ -347,7 +342,7 @@ class MyTwinWidthEncoding:
 
                 if slv.solve() if timeout == 0 else slv.solve_limited():
                     model = slv.get_model()
-                    elim_order = self.elim_order(model, i)
+                    elim_order = self.elim_order(model, i) # TODO: find elim order only for the last d
                     if verbose:
                         print(f"Found {i}")
                     i = cb =  cb - 1
@@ -371,7 +366,6 @@ class MyTwinWidthEncoding:
         node_id = [*range(self.num_original_vertices+1)]+[0]*(num_parents)
         children_ids = [(0, 0)]*(self.num_total_vertices+2)
         parent = [0]*(self.num_total_vertices+2)
-        logging.debug(f"self.num_total_vertices = {self.num_total_vertices}")
 
         for i in range(self._parent_start_index, self.num_total_vertices+1):
             left = right = 0

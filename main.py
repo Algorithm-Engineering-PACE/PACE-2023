@@ -16,7 +16,6 @@ from pathlib import Path
 from pandas import DataFrame
 import typer
 import networkx as nx
-import matplotlib.pyplot as plt
 
 
 logging.basicConfig(level=logging.WARNING)
@@ -67,7 +66,6 @@ def process_file(instance_path: Path, file_name: str | Path,
 
         ## our preprocessing
         g = preprocessing.preproccess(g)
-        logging.debug(f"nodes of g: {g.nodes}")
 
         if len(g.nodes) <= 1:
             print("Done, width: 0")
