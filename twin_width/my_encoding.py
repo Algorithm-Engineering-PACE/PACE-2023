@@ -326,8 +326,9 @@ class MyTwinWidthEncoding:
                     if verbose:
                         print(f"Found {i}")
                     # cb = self.decode(slv.get_model(), g, i)
-                    i = cb - 1
+                    i = cb =  cb - 1
                 else:
+                    cb += 1
                     if verbose:
                         print(f"Failed {i}")
                     break
