@@ -337,6 +337,8 @@ class MyTwinWidthEncoding:
                     print(f"Finished cycle in {time.time() - start}")
         if timer is not None:
             timer.cancel()
+        if cb == 0: # note that twin-width 0 case is taken care of seperately in main
+            cb = 1
         return cb, None, None, time.time() - start
 
     def decode(self, model, g, d):
