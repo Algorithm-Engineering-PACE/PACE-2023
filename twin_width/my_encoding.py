@@ -275,6 +275,12 @@ class MyTwinWidthEncoding:
                     )
                 )
 
+    def encode_break_symmetry(self):
+        for i in range(self._parent_start_index, self.num_total_vertices + 1):
+            for j in range(1, i):
+                for k in range(1, j):
+                    self.formula.append([-self.left_child[i][j], -self.right_child[i][k]])
+
     def encode(self, g, d):
         g = self.remap_graph(g)
         self.pool = IDPool()
@@ -286,7 +292,7 @@ class MyTwinWidthEncoding:
         self.encode_edges()
         self.encode_red_unvanished()
         self.encode_counters(d)
-        # self.break_symmetry() TODO
+        self.encode_break_symmetry()
         print(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
 
