@@ -156,28 +156,24 @@ class MyTwinWidthEncoding:
         # first encode when i is the first non-original vertex
         # the two vertices merging into it gets vanished
         for j in range(1, s):
-            self.formula.append(
-                fops.equiv(
-                    [self.vanished[s][j]],
-                    [self.left_child[s][j], self.right_child[s][j]],
-                )
-            )
-
+            self.formula.extend(fops.equiv(
+                self.vanished[s][j],
+                [self.left_child[s][j], self.right_child[s][j]]
+            ))
         # now encode it for the remaining non-original vertices
         # the two vertices merging into i gets vanished
         # and also the ones that are vanished in i-1 remain vanished
         for i in range(s + 1, self.num_total_vertices + 1):
             for j in range(1, i):
-                self.formula.append(
-                    fops.equiv(
-                        [self.vanished[i][j]],
-                        [
-                            self.vanished[i - 1][j],
-                            self.left_child[i][j],
-                            self.right_child[i][j],
-                        ],
-                    )
-                )
+                self.formula.extend(fops.equiv(
+                    self.vanished[i][j],
+                    [
+                        self.vanished[i - 1][j],
+                        self.left_child[i][j],
+                        self.right_child[i][j]
+                    ]
+                ))
+
 
     # encoding edges and red-edges for contracted vertices
     def encode_edges(self):
@@ -188,99 +184,82 @@ class MyTwinWidthEncoding:
                         continue
                     a = min(i, c)
                     b = max(i, c)
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.left_child[p][c]], [self.edge[a][b]]),
-                            [self.left_edge[i][p]],
-                        )
-                    )
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.right_child[p][c]], [self.edge[a][b]]),
-                            [self.right_edge[i][p]],
-                        )
-                    )
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.left_child[p][c]], [self.red[a][b]]),
-                            [self.left_red[i][p]],
-                        )
-                    )
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.right_child[p][c]], [self.red[a][b]]),
-                            [self.right_red[i][p]],
-                        )
-                    )
 
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.left_child[p][c]], [-self.edge[a][b]]),
-                            [-self.left_edge[i][p]],
-                        )
-                    )
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.right_child[p][c]], [-self.edge[a][b]]),
-                            [-self.right_edge[i][p]],
-                        )
-                    )
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.left_child[p][c]], [-self.red[a][b]]),
-                            [-self.left_red[i][p]],
-                        )
-                    )
-                    self.formula.append(
-                        fops.implies(
-                            fops.conj([self.right_child[p][c]], [-self.red[a][b]]),
-                            [-self.right_red[i][p]],
-                        )
-                    )
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.left_child[p][c]], [self.edge[a][b]]),
+                        [self.left_edge[i][p]],
+                    ))
 
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.right_child[p][c]], [self.edge[a][b]]),
+                        [self.right_edge[i][p]],
+                    ))
+
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.left_child[p][c]], [self.red[a][b]]),
+                        [self.left_red[i][p]],
+                    ))
+
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.right_child[p][c]], [self.red[a][b]]),
+                        [self.right_red[i][p]],
+                    ))
+
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.left_child[p][c]], [-self.edge[a][b]]),
+                        [-self.left_edge[i][p]],
+                    ))
+
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.right_child[p][c]], [-self.edge[a][b]]),
+                        [-self.right_edge[i][p]],
+                    ))
+
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.left_child[p][c]], [-self.red[a][b]]),
+                        [-self.left_red[i][p]],
+                    ))
+
+                    self.formula.extend(fops.implies(
+                        fops.conj([self.right_child[p][c]], [-self.red[a][b]]),
+                        [-self.right_red[i][p]],
+                    ))
+        # Encoding edges for new vertices
         for i in range(self._parent_start_index, self.num_total_vertices + 1):
             for j in range(1, i):
-                self.formula.append(
-                    fops.equiv(
-                        [self.edge[j][i]],
-                        fops.conj(
-                            [-self.vanished[i][j]],
-                            [self.left_edge[j][i], self.right_edge[j][i]],
-                        ),
-                    )
-                )
-                self.formula.append(
-                    fops.equiv(
-                        [self.red[j][i]],
-                        fops.conj(
-                            [self.edge[j][i]],
-                            [
-                                self.left_red[j][i],
-                                self.right_red[j][i],
-                                fops.xor(self.left_edge[j][i], self.right_edge[j][i]),
-                            ],
-                        ),
-                    )
-                )
+                self.formula.extend([[-self.edge[j][i], self.left_edge[j][i], self.right_edge[j][i]],
+                                     [-self.vanished[i][j], -self.edge[j][i]],
+                                     [-self.left_edge[j][i], self.edge[j][i],self.vanished[i][j]],
+                                     [-self.right_edge[j][i], self.edge[j][i],self.vanished[i][j]]
+                ])
+
+                self.formula.extend([[-self.red[j][i], self.edge[j][i]],
+                                     [-self.red[j][i], self.left_red[j][i], self.right_red[j][i],
+                                         self.left_edge[j][i], self.right_edge[j][i]],
+                                     [-self.red[j][i], self.left_red[j][i], self.right_red[j][i],
+                                         -self.left_edge[j][i], -self.right_edge[j][i]]
+                ])
+
+                self.formula.extend([[self.red[j][i], -self.edge[j][i], -self.left_red[j][i]],
+                                     [self.red[j][i], -self.edge[j][i], -self.right_red[j][i]],
+                                     [self.red[j][i], -self.edge[j][i], -self.left_edge[j][i],
+                                         self.right_edge[j][i]],
+                                     [self.red[j][i], -self.edge[j][i], -self.right_edge[j][i],
+                                         self.left_edge[j][i]]
+                ])
+
+
 
     def encode_red_unvanished(self):
         for i in range(self._parent_start_index, self.num_total_vertices + 1):
             for j in range(1, i + 1):
-                for k in range(1, i + 1):
-                    if i == j:
-                        continue
-                    a = min(j, k)
-                    b = max(j, k)
-                    self.formula.append(
-                        fops.equiv(
-                            self.red_unvanished[i][a][b],
-                            fops.conj(
-                                -self.vanished[i][a],
-                                -self.vanished[i][b],
-                                self.red[a][b],
-                            ),
-                        )
+                for k in range(j + 1, i + 1):
+                    self.formula.extend([[-self.vanished[i][j], -self.red_unvanished[i][j][k]],
+                                         [-self.vanished[i][k], -self.red_unvanished[i][j][k]],
+                                         [self.red[j][k], -self.red_unvanished[i][j][k]]]
                     )
+                    self.formula.extend([[self.vanished[i][j], self.vanished[i][k],
+                                          self.red_unvanished[i][j][k], -self.red[j][k]]])
 
     def encode_counters(self, d):
         for i in range(self._parent_start_index, self.num_total_vertices + 1):
@@ -305,7 +284,8 @@ class MyTwinWidthEncoding:
         self.encode_parent_child()
         self.encode_vanished()
         self.encode_edges()
-        self.encode_counters()
+        self.encode_red_unvanished()
+        self.encode_counters(d)
         # self.break_symmetry() TODO
         print(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
@@ -346,8 +326,9 @@ class MyTwinWidthEncoding:
                     if verbose:
                         print(f"Found {i}")
                     # cb = self.decode(slv.get_model(), g, i)
-                    # i = cb - 1
+                    i = cb =  cb - 1
                 else:
+                    cb += 1
                     if verbose:
                         print(f"Failed {i}")
                     break
@@ -356,7 +337,9 @@ class MyTwinWidthEncoding:
                     print(f"Finished cycle in {time.time() - start}")
         if timer is not None:
             timer.cancel()
-        return cb
+        if cb == 0: # note that twin-width 0 case is taken care of seperately in main
+            cb = 1
+        return cb, None, None, time.time() - start
 
     def decode(self, model, g, d):
         g = g.copy()

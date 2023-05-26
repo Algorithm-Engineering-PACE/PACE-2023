@@ -14,6 +14,7 @@ import tools
 from pathlib import Path
 from pandas import DataFrame
 import typer
+import networkx as nx
 
 app = typer.Typer()
 BASE_PATH = Path(__file__).parent
@@ -177,7 +178,47 @@ def delete_files_starting_with(prefix):
             else:
                 print(f"Skipping non-file: {file_path}")
 
+@app.command()
+def custom_graph():
+    ## our preprocessing
+    results = []
+    g = nx.path_graph(4)
+    g = preprocessing.preproccess(g)
 
+    if len(g.nodes) <= 1:
+        print("Done, width: 0")
+        results.append({"instance_name": "custom"
+                        ,"# nodes": g.number_of_nodes()
+                        ,"# edges": g.number_of_edges()
+                        ,"tww": 0
+                        ,"elimination_ordering": None
+                        ,"contraction_tree": None
+                        ,"cycle_times": None
+                        ,"duration": None
+                                })
+        return
+
+    ub = heuristic.get_ub(g)
+    ub2 = heuristic.get_ub2(g)
+    print(f"UB {ub} {ub2}")
+    ub = min(ub, ub2)
+
+    start = time.time()
+    enc = encoding.MyTwinWidthEncoding(g, ub)
+    cb = enc.run(g, slv.Cadical103, ub)
+
+    duration = time.time() - start
+    print(f"Finished, result: {cb}")
+    results.append({"instance_name": "custom"
+                    ,"# nodes": g.number_of_nodes()
+                    ,"# edges": g.number_of_edges()
+                    ,"tww": cb[0]
+                    ,"elimination_ordering": cb[1]
+                    ,"contraction_tree": cb[2]
+                    ,"cycle_times": cb[3]
+                    ,"duration": duration
+                            })
+    return results
 
 if __name__ == "__main__":
     app()
