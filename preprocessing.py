@@ -2,7 +2,7 @@ from enum import Enum
 import networkx as nx
 import copy
 import tools
-
+from logger import logger
 ## sagemath implementation for graph modular decomposition 
 
 class NodeType(Enum):
@@ -740,9 +740,24 @@ def get_vertices(component_root):
     return True
 
 
+def is_prime_helper(md_tree,graph):
+    return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
 
 def is_prime(md_tree,graph):
-    return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
+    is_connected_prime = is_prime_helper(md_tree,graph)
+    if not is_connected_prime:
+        is_unconnected_prime = True
+        for child in md_tree.children:
+            module_vertices = get_vertices(child)
+            g_m = graph.subgraph(module_vertices)
+            is_unconnected_prime *= is_prime_helper(child,g_m)
+        res = is_unconnected_prime
+    else:
+        res = is_connected_prime
+    
+    return res
+        
+
 
 
 
@@ -825,20 +840,22 @@ def create_contraction_tree(node,contraction_tree):
    
 def preproccess(graph_):
     graph = copy.deepcopy(graph_)
-    print(graph_.nodes())
     res = {}
     res['output_graph'] = graph 
     res['contraction_tree'],res['is_cograph'] = None,None
-    md_tree = habib_maurer_algorithm(graph)
-    if not is_prime(md_tree,graph):
-        output_graph = create_graph_from_prime_g(md_tree,graph)
-        contraction_tree = {}
-        create_contraction_tree(copy.deepcopy(md_tree),contraction_tree)
-        res['output_graph'] = output_graph
-        res['contraction_tree'] = contraction_tree
-        res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0 
-    print(res['output_graph'].nodes())
-
-    return res
+    try:
+        md_tree = habib_maurer_algorithm(graph)
+        if not is_prime(md_tree,graph):
+            output_graph = create_graph_from_prime_g(md_tree,graph)
+            contraction_tree = {}
+            create_contraction_tree(copy.deepcopy(md_tree),contraction_tree)
+            res['output_graph'] = output_graph
+            res['contraction_tree'] = contraction_tree
+            res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0 
+    except Exception as ex:
+        logger.debug("preproccess exception - handling by returning original graph",exc_info=ex)
+        pass
+    finally:
+        return res
 
 
