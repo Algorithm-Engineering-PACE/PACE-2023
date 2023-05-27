@@ -3,7 +3,7 @@ import networkx as nx
 import copy
 import tools
 
-## sagemath implementation for graph modular decomposition 
+## sagemath implementation for graph modular decomposition
 
 class NodeType(Enum):
     """
@@ -18,9 +18,9 @@ class NodeType(Enum):
 
     - ``PRIME`` -- indicates the node is a prime module (G and G complement is connected)
 
-    - ``FOREST`` -- indicates a forest containing trees 
+    - ``FOREST`` -- indicates a forest containing trees
 
-    - ``NORMAL`` -- indicates the node is normal containing a vertex 
+    - ``NORMAL`` -- indicates the node is normal containing a vertex
     """
     PRIME = 0
     SERIES = 1
@@ -822,13 +822,12 @@ def create_contraction_tree(node,contraction_tree):
         contraction_tree[ver[i]] = ver[0]
         nodes_to_remove.append(node.children[i])
     node.children = [node.children[0]]
-   
+
 def preproccess(graph_):
     graph = copy.deepcopy(graph_)
-    print(graph_.nodes())
     res = {}
-    res['output_graph'] = graph 
-    res['contraction_tree'],res['is_cograph'] = None,None
+    res['output_graph'] = graph
+    res['contraction_tree'],res['is_cograph'] = {}, False
     md_tree = habib_maurer_algorithm(graph)
     if not is_prime(md_tree,graph):
         output_graph = create_graph_from_prime_g(md_tree,graph)
@@ -836,9 +835,6 @@ def preproccess(graph_):
         create_contraction_tree(copy.deepcopy(md_tree),contraction_tree)
         res['output_graph'] = output_graph
         res['contraction_tree'] = contraction_tree
-        res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0 
-    print(res['output_graph'].nodes())
+        res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0
 
     return res
-
-

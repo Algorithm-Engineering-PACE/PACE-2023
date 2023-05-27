@@ -40,7 +40,7 @@ def process_graphs_from_dir(instance_path: Path, start: int =0, to: int=-1):
     for file_name in files:
         res = process_file(instance_path, file_name, save_result_to_csv=False)
         results.append(res)
-    
+
     df = DataFrame().from_records(results)
     results_file_name = (BASE_PATH /
         f"results_tww_{datetime.now()}.csv").resolve()
@@ -69,7 +69,7 @@ def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = Fal
                 line = f"{parents[child]} {child}"
                 print(line, flush=True)
                 lines.append(str(line)+"\n")
-                
+
             for child in ordering[:-1]:
                 line = f"{parents[child]} {child}"
                 print(line, flush=True)
@@ -77,15 +77,15 @@ def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = Fal
             if print_to_file:
                 with open(file_path, 'w') as file:
                     file.writelines(lines)
-                
-                
+
+
         else:
             raise Exception("contraction tree is not valid - number of contraction != num_of_nodes - 1")
     else:
         raise Exception("result is not valid")
 
 
-## TODO: merge two contraction tree 
+## TODO: merge two contraction tree
 def process_file(instance_path: Path, file_name: str ,
     save_result_to_csv = True,save_pace_output = True):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
@@ -162,7 +162,7 @@ def process_file(instance_path: Path, file_name: str ,
                 for u in list(g.predecessors(n)):
                     g.remove_edge(u, n)
                 g.nodes[n]["del"] = True
-    
+
     if save_result_to_csv:
         df = DataFrame().from_records([result])
         results_file_name = (BASE_PATH /
@@ -214,17 +214,17 @@ def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False
 
     start = time.time()
     enc = encoding.TwinWidthEncoding()
-    cb = enc.run(g, slv.Cadical103, ub)
-
+    cb, od, mg, times = enc.run(g, slv.Cadical103, ub)
+    contraction_tree.update(mg)
     duration = time.time() - start
     logger.debug(f"Finished, result: {cb}")
     return({"instance_name": instance_name
                     ,"num_of_nodes": g.number_of_nodes()
                     ,"num_of_edges": g.number_of_edges()
-                    ,"tww": cb[0]
-                    ,"elimination_ordering": cb[1]
-                    ,"contraction_tree": {**contraction_tree, **cb[2]}
-                    ,"cycle_times": cb[3]
+                    ,"tww": cb
+                    ,"elimination_ordering": od
+                    ,"contraction_tree": contraction_tree
+                    ,"cycle_times": times
                     ,"duration": duration
                             })
 

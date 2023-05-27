@@ -119,17 +119,17 @@ class TwinWidthEncoding:
         self.sb_reds(n, formula)
         return formula
 
-    def run(self, g: Graph, solver, start_bound, verbose=True, check=True, lb=0):
+    def run(self, g: Graph, solver, start_bound, verbose=True, check=True, lb=1):
         start = time.time()
         if is_connected(g):
-            return self.run_instance(g, solver, start_bound, verbose, check, lb=0)
+            return self.run_instance(g, solver, start_bound, verbose, check, lb)
         else:
             return max([self.run_instance(subgraph(g, c),
                                 solver, min(heuristic.get_ub(subgraph(g, c)), heuristic.get_ub2(subgraph(g, c))),
-                                verbose, check, lb=0) for c in connected_components(g)], key=itemgetter(0))
+                                verbose, check, lb) for c in connected_components(g)], key=itemgetter(0))
 
-    def run_instance(self, g, solver, start_bound, verbose=True, check=True, lb=0):
-        if len(g.nodes) == 1:
+    def run_instance(self, g, solver, start_bound, verbose=True, check=True, lb=1):
+        if len(g.nodes) == 1: #  Preprocessing should handle this case
             logger.debug("Done, width: 0")
             return 0, None, None, time.time() - time.time()
 
