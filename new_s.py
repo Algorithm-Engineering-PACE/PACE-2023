@@ -31,12 +31,12 @@ def parse_stdin():
     return g
 
 
-def process_graph(graph : Graph ,instance_name = None,save_result_to_csv = False):
+def process_graph(graph : Graph ,instance_name = None,save_result_to_csv = False) -> dict:
     ## our preprocessing
     res = preprocessing.preproccess(graph)
     g = res['output_graph']
     if res.get("cograph"):
-        return ({"instance_name": instance_name
+        return {"instance_name": instance_name
                         ,"num_of_nodes": graph.number_of_nodes()
                         ,"num_of_edges": graph.number_of_edges()
                         ,"tww": 0
@@ -44,7 +44,7 @@ def process_graph(graph : Graph ,instance_name = None,save_result_to_csv = False
                         ,"contraction_tree": res['cograph']['contraction_tree']
                         ,"cycle_times": None
                         ,"duration": None
-                                })
+                                }
     ub = heuristic.get_ub(g)
     ub2 = heuristic.get_ub2(g)
     ub = min(ub, ub2)
@@ -52,26 +52,28 @@ def process_graph(graph : Graph ,instance_name = None,save_result_to_csv = False
     enc = encoding.TwinWidthEncoding()
     cb = enc.run(g, slv.Cadical103, ub)
 
-    return({"instance_name": instance_name
-                    ,"num_of_nodes": g.number_of_nodes()
-                    ,"num_of_edges": g.number_of_edges()
-                    ,"tww": cb[0]
-                    ,"elimination_ordering": cb[1]
-                    ,"contraction_tree": cb[2]
-                    ,"cycle_times": cb[3]
-                            })
+    return  {
+        "instance_name": instance_name
+        ,"num_of_nodes": g.number_of_nodes()
+        ,"num_of_edges": g.number_of_edges()
+        ,"tww": cb[0]
+        ,"elimination_ordering": cb[1]
+        ,"contraction_tree": cb[2]
+        ,"cycle_times": cb[3]
+    }
 
 
 def proccess_graph_from_input():
     g = parse_stdin()
     result = process_graph(g.copy())
-    contraction_tree = dict(result).get("contraction_tree")
-    num_of_nodes = dict(result).get("num_of_nodes")
-    if contraction_tree and num_of_nodes:
-        if len(contraction_tree) == int(num_of_nodes) - 1:
+    parents = result.get("contraction_tree")
+    ordering = result.get("elimination_ordering")
+    num_of_nodes = result.get("num_of_nodes")
+    if parents and num_of_nodes:
+        if len(parents) == int(num_of_nodes) - 1:
             ## y is contracted to x
-            for y,x in dict(contraction_tree).items():
-                print(f"{x} {y}", flush=True)
+            for child in ordering[:-1]:
+                print(f"{parents[child]} {child}", flush=True)
         else:
             raise Exception("contraction tree is not valid - number of contraction != num_of_nodes - 1")
     else:
@@ -79,4 +81,3 @@ def proccess_graph_from_input():
 
 if __name__=='__main__':
     proccess_graph_from_input()
-
