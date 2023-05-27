@@ -3,13 +3,13 @@ from typing import List, Dict, Optional
 
 from networkx import Graph
 from pysat.card import CardEnc, EncType
-from pysat.formula import CNF, IDPool
+from pysat.formula import CNF, IDPool, CNFPlus
 from threading import Timer
 import twin_width.formula_ops as fops
 
 
 class MyTwinWidthEncoding:
-    def __init__(self, g, d, card_enc: EncType=1):
+    def __init__(self, g, d, card_enc: EncType=EncType.sortnetwrk):
         self.edge: Optional[List[Dict[int, int]]] = None
         self.merge: Optional[Dict] = None
         self.node_map: Optional[Dict] = None
@@ -271,7 +271,7 @@ class MyTwinWidthEncoding:
                 ]
                 self.formula.extend(
                     CardEnc.atmost(
-                        vars_to_count, bound=d, vpool=self.pool, encoding=EncType.totalizer
+                        vars_to_count, bound=d, vpool=self.pool, encoding=self.card_enc
                     )
                 )
 
@@ -284,7 +284,10 @@ class MyTwinWidthEncoding:
     def encode(self, g, d):
         g = self.remap_graph(g)
         self.pool = IDPool()
-        self.formula = CNF()
+        if self.card_enc != EncType.seqcounter:
+            self.formula = CNFPlus()
+        else:
+            self.formula = CNF()
         self.init_var(g, d)
         self.encode_original_edges(g)
         self.encode_parent_child()
