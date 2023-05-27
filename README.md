@@ -18,6 +18,6 @@ python3 pace_verifier.py <file_name> <file_name*>_pace_output.gr
 ## Creating submission
 In order to create a submission use a linux machine in the project folder run the following:
 
-`tar -zcf submission.tgz *`.
+`tar -zcf submission_main.tgz *`.
 
-Upload to optil.io `new_s.tgz` file
+Upload to optil.io `submission_main.tgz` file

@@ -54,20 +54,38 @@ def process_graph_from_instance(file_name: Path):
 def proccess_graph_from_input():
     g = parser.parse_stdin()
     result = process_graph(g.copy())
-    contraction_tree = dict(result).get("contraction_tree")
-    num_of_nodes = dict(result).get("num_of_nodes")
-    if contraction_tree and num_of_nodes:
-        if len(contraction_tree) == int(num_of_nodes) - 1:
-            ## y is contracted to x
-            for y,x in dict(contraction_tree).items():
-                print(f"{x} {y}", flush=True)                    
-        else:
-            logger.error("contraction tree is not valid - number of contraction != num_of_nodes - 1")
-    else:
-        logger.error("result is not valid")
-   
-        
+    print_contraction_tree(result,g.number_of_nodes())
 
+
+def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = False,file_path = None):
+    parents = result.get("contraction_tree")
+    ordering = result.get("elimination_ordering")
+    symetric_diff = set(i for i in range(1,num_of_nodes_orginal_graph + 1)).symmetric_difference(set(ordering))
+    lines = []
+    if parents:
+        if len(parents) == int(num_of_nodes_orginal_graph) - 1:
+            ## child is contracted to parnet
+            for child in symetric_diff:
+                line = f"{parents[child]} {child}"
+                print(line, flush=True)
+                lines.append(str(line)+"\n")
+                
+            for child in ordering[:-1]:
+                line = f"{parents[child]} {child}"
+                print(line, flush=True)
+                lines.append(str(line)+"\n")
+            if print_to_file:
+                with open(file_path, 'w') as file:
+                    file.writelines(lines)
+                
+                
+        else:
+            raise Exception("contraction tree is not valid - number of contraction != num_of_nodes - 1")
+    else:
+        raise Exception("result is not valid")
+
+
+## TODO: merge two contraction tree 
 def process_file(instance_path: Path, file_name: str ,
     save_result_to_csv = True,save_pace_output = True):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
@@ -151,10 +169,8 @@ def process_file(instance_path: Path, file_name: str ,
             f"results_tww_{datetime.now()}.csv").resolve()
         df.to_csv(results_file_name)
     if save_pace_output:
-        contraction_tree = [f"{x} {y}\n" for y,x in dict(result['contraction_tree'] ).items()]
         pace_output_file_name =  (BASE_PATH /  (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
-        with open(pace_output_file_name, 'w') as file:
-                file.writelines(contraction_tree)
+        print_contraction_tree(result,g.number_of_nodes(),True,pace_output_file_name)
     return result
 
 def delete_files_starting_with(prefix):
@@ -179,14 +195,15 @@ def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False
     ## our preprocessing
     res = preprocessing.preproccess(graph)
     g = res['output_graph']
-    if res.get("cograph"):
+    contraction_tree = res['contraction_tree']
+    if res["is_cograph"]:
         logger.debug("Done, width: 0")
         return ({"instance_name": instance_name
                         ,"num_of_nodes": graph.number_of_nodes()
                         ,"num_of_edges": graph.number_of_edges()
                         ,"tww": 0
                         ,"elimination_ordering": None
-                        ,"contraction_tree": res['cograph']['contraction_tree']
+                        ,"contraction_tree": contraction_tree
                         ,"cycle_times": None
                         ,"duration": None
                                 })
@@ -206,7 +223,7 @@ def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False
                     ,"num_of_edges": g.number_of_edges()
                     ,"tww": cb[0]
                     ,"elimination_ordering": cb[1]
-                    ,"contraction_tree": cb[2]
+                    ,"contraction_tree": {**contraction_tree, **cb[2]}
                     ,"cycle_times": cb[3]
                     ,"duration": duration
                             })
