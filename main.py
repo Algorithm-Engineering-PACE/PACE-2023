@@ -57,24 +57,32 @@ def proccess_graph_from_input():
     print_contraction_tree(result,g.number_of_nodes())
 
 
-def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = False,file_path = None):
+def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = False, file_path = None):
     parents = result.get("contraction_tree")
     ordering = result.get("elimination_ordering")
     symetric_diff = set(i for i in range(1,num_of_nodes_orginal_graph + 1)).symmetric_difference(set(ordering))
     lines = []
     if parents:
         if len(parents) == int(num_of_nodes_orginal_graph) - 1:
+            if result.get("tww") > 0:
             ## child is contracted to parnet
-            for child in symetric_diff:
-                line = f"{parents[child]} {child}"
-                print(line, flush=True)
-                lines.append(str(line)+"\n")
+                if symetric_diff:
+                    for child in symetric_diff:
+                        line = f"{parents[child]} {child}"
+                        print(line, flush=True)
+                        lines.append(str(line)+"\n")
 
-            for child in ordering[:-1]:
-                line = f"{parents[child]} {child}"
-                print(line, flush=True)
-                lines.append(str(line)+"\n")
-            if print_to_file:
+                for child in ordering[:-1]:
+                    line = f"{parents[child]} {child}"
+                    print(line, flush=True)
+                    lines.append(str(line)+"\n")
+            else:
+                for parent,child in dict(parents).items():
+                    line = f"{child} {parent}"
+                    print(line, flush=True)
+                    lines.append(str(line)+"\n")
+
+            if print_to_file and file_path:
                 with open(file_path, 'w') as file:
                     file.writelines(lines)
 
@@ -85,7 +93,6 @@ def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = Fal
         raise Exception("result is not valid")
 
 
-## TODO: merge two contraction tree
 def process_file(instance_path: Path, file_name: str ,
     save_result_to_csv = True,save_pace_output = True):
     instance_file_name = (instance_path / file_name).resolve().as_posix()
@@ -169,7 +176,7 @@ def process_file(instance_path: Path, file_name: str ,
             f"results_tww_{datetime.now()}.csv").resolve()
         df.to_csv(results_file_name)
     if save_pace_output:
-        pace_output_file_name =  (BASE_PATH /  (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
+        pace_output_file_name =  (BASE_PATH / (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
         print_contraction_tree(result,g.number_of_nodes(),True,pace_output_file_name)
     return result
 
@@ -195,14 +202,14 @@ def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False
     ## our preprocessing
     res = preprocessing.preproccess(graph)
     g = res['output_graph']
-    contraction_tree = res['contraction_tree']
+    contraction_tree = res['contraction_tree'] if res['contraction_tree'] else {}
     if res["is_cograph"]:
         logger.debug("Done, width: 0")
         return ({"instance_name": instance_name
                         ,"num_of_nodes": graph.number_of_nodes()
                         ,"num_of_edges": graph.number_of_edges()
                         ,"tww": 0
-                        ,"elimination_ordering": None
+                        ,"elimination_ordering": list(contraction_tree.keys())
                         ,"contraction_tree": contraction_tree
                         ,"cycle_times": None
                         ,"duration": None

@@ -3,7 +3,7 @@ import networkx as nx
 import copy
 import tools
 
-## sagemath implementation for graph modular decomposition
+from logger import logger
 
 class NodeType(Enum):
     """
@@ -601,18 +601,18 @@ def habib_maurer_algorithm(graph, g_classes=None):
         root = create_normal_node(next(graph.__iter__()))
         return root
     ## if g is not connected :
-    ## 1.create parallel node 
-    ## 2.set node's children to be g connected components (rec)  
+    ## 1.create parallel node
+    ## 2.set node's children to be g connected components (rec)
     elif not nx.is_connected(graph):
         root = create_parallel_node()
         root.children = [habib_maurer_algorithm(graph.subgraph(component), g_classes)
                          for component in  nx.components.connected_components(graph)]
         return root
     ## if g is connected and g complement is connected :
-    ## 1.create prime node 
+    ## 1.create prime node
     ## 2.get g modules using gamma_classes (does not contain all edges)
-    ## 3.calc maximal modules of g 
-    ## 4.set node's children to be g.subgraph(maximal module nodes) (rec)  
+    ## 3.calc maximal modules of g
+    ## 4.set node's children to be g.subgraph(maximal module nodes) (rec)
     g_comp = nx.complement(graph)
     if nx.is_connected(g_comp):
         from collections import defaultdict
@@ -644,7 +644,7 @@ def habib_maurer_algorithm(graph, g_classes=None):
 
 
 def get_vertices(component_root):
-    
+
     vertices = []
 
     def recurse_component(node, vertices):
@@ -740,9 +740,24 @@ def get_vertices(component_root):
     return True
 
 
+def is_prime_helper(md_tree,graph):
+    return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
 
 def is_prime(md_tree,graph):
-    return md_tree.node_type == NodeType.PRIME and len(md_tree.children) == graph.number_of_nodes()
+    is_connected_prime = is_prime_helper(md_tree,graph)
+    if not is_connected_prime:
+        is_unconnected_prime = True
+        for child in md_tree.children:
+            module_vertices = get_vertices(child)
+            g_m = graph.subgraph(module_vertices)
+            is_unconnected_prime *= is_prime_helper(child,g_m)
+        res = is_unconnected_prime
+    else:
+        res = is_connected_prime
+
+    return res
+
+
 
 
 
@@ -756,14 +771,14 @@ def run_test_on_wiki_graph():
     p_set = prime_g(md_tree,g)
     preprocessed_graph = create_graph_from_prime_g(md_tree,g)
 
-   
-    
+
+
 def run_test_on_icosahedral_graph():
     g = nx.generators.icosahedral_graph()
     md_tree = habib_maurer_algorithm(g)
     p_set = prime_g(md_tree,g)
     preprocessed_graph = create_graph_from_prime_g(md_tree,g)
-  
+
 
 def quotient_graph(root,g):
     maximal_modules = {frozenset(get_vertices(child)) for child in root.children}
@@ -772,16 +787,16 @@ def quotient_graph(root,g):
         vertices.append(list(module)[0])
     quotient_g = g.subgraph(vertices)
     return quotient_g
-    
-    
-    
+
+
+
 def prime_g_helper(root,graph,prime_g_set):
     if root.node_type == NodeType.NORMAL:
         return
     elif root.node_type == NodeType.SERIES or root.node_type == NodeType.PARALLEL:
          for connected_component in root.children:
             prime_g_helper(connected_component,graph,prime_g_set)
-    
+
     elif root.node_type == NodeType.PRIME:
         prime_g_set.append(quotient_graph(root,graph))
         for maximal_module in root.children:
@@ -790,12 +805,12 @@ def prime_g_helper(root,graph,prime_g_set):
                 g_m = graph.subgraph(module_vertices)
                 prime_g_helper(maximal_module,g_m,prime_g_set)
 
-            
+
 def prime_g(root,graph):
     prime_g_set = []
     prime_g_helper(root,graph,prime_g_set)
     return prime_g_set
-            
+
 
 def create_graph_from_prime_g(md_tree,graph):
     prime_g_set = prime_g(md_tree,graph)
@@ -804,13 +819,13 @@ def create_graph_from_prime_g(md_tree,graph):
         preprocessed_graph = nx.union(preprocessed_graph,subgraph)
     return preprocessed_graph
 
- # this function is used before calculating tww 
+ # this function is used before calculating tww
 
 
 def create_contraction_tree(node,contraction_tree):
     if node.node_type == NodeType.NORMAL:
         return
-    
+
     for child in node.children:
         create_contraction_tree(child,contraction_tree)
 
@@ -827,14 +842,18 @@ def preproccess(graph_):
     graph = copy.deepcopy(graph_)
     res = {}
     res['output_graph'] = graph
-    res['contraction_tree'],res['is_cograph'] = {}, False
-    md_tree = habib_maurer_algorithm(graph)
-    if not is_prime(md_tree,graph):
-        output_graph = create_graph_from_prime_g(md_tree,graph)
-        contraction_tree = {}
-        create_contraction_tree(copy.deepcopy(md_tree),contraction_tree)
-        res['output_graph'] = output_graph
-        res['contraction_tree'] = contraction_tree
-        res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0
-
-    return res
+    res['contraction_tree'], res['is_cograph'] = {}, False
+    try:
+        md_tree = habib_maurer_algorithm(graph)
+        if not is_prime(md_tree,graph):
+            output_graph = create_graph_from_prime_g(md_tree,graph)
+            contraction_tree = {}
+            create_contraction_tree(copy.deepcopy(md_tree),contraction_tree)
+            res['output_graph'] = output_graph
+            res['contraction_tree'] = contraction_tree
+            res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0
+    except Exception as ex:
+        logger.debug("preproccess exception - handling by returning original graph",exc_info=ex)
+        pass
+    finally:
+        return res
