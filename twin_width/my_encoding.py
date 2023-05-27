@@ -402,12 +402,11 @@ class MyTwinWidthEncoding:
             print(f"Number of uncontracted vertices is {len(roots_ids)} but expected {d+2}")
             print(f"parents:{parent}")
             return None
-        logging.debug(f"uncontracted vertices ids: {roots_ids}")
         root1_id = roots_ids[0]
         final_contractions = []
         for i in range(1, len(roots_ids)):
             final_contractions.append((root1_id, roots_ids[i]))
-        return children_ids[self._parent_start_index:self.num_total_vertices] + final_contractions
+        return children_ids[self._parent_start_index:self.num_total_vertices+1] + final_contractions
 
 
 
