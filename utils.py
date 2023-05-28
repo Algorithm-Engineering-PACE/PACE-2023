@@ -74,7 +74,6 @@ def print_contraction_tree_from_input():
 def print_contraction_tree(parents: dict, ordering: list, tww: int , num_of_nodes_orginal_graph, print_to_file = False, file_path = None):
     symetric_diff = set(i for i in range(1,num_of_nodes_orginal_graph + 1)).symmetric_difference(set(ordering))
     lines = []
-    print(len(parents))
     if parents:
         if len(parents) == int(num_of_nodes_orginal_graph) - 1:
             if tww > 0:
