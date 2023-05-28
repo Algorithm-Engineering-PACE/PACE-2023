@@ -40,7 +40,7 @@ def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = Fals
                         ,"num_of_nodes": graph.number_of_nodes()
                         ,"num_of_edges": graph.number_of_edges()
                         ,"tww": 0
-                        ,"elimination_ordering": None
+                        ,"elimination_ordering": set()
                         ,"contraction_tree": contraction_tree
                         ,"cycle_times": None
                         ,"duration": None
