@@ -50,7 +50,7 @@ def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = Fals
     ub = min(ub, ub2)
 
     enc = encoding.TwinWidthEncoding()
-    cb, od, mg, times = enc.run(g, slv.Cadical103, ub)
+    cb, od, mg, times = enc.run(g, slv.Cadical, ub)
     contraction_tree.update(mg)
 
     return  {
