@@ -1,4 +1,5 @@
 import sys
+from attr import dataclass
 
 import networkx as nx
 from networkx import Graph
@@ -34,7 +35,9 @@ def parse_stdin():
 
 def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = False) -> dict:
     ## our preprocessing
-    g, contraction_tree, is_cograph = preprocessing.preproccess(graph)
+    res = preprocessing.preproccess(graph)
+
+    g, contraction_tree, is_cograph = None,None,None 
     if is_cograph:
         return {"instance_name": instance_name
                         ,"num_of_nodes": graph.number_of_nodes()
@@ -103,7 +106,11 @@ def print_contraction_tree(parents: dict, ordering: list, tww: int , num_of_node
     else:
         raise Exception("result is not valid")
 
-# @dataclass
-# class PrimeGraphCollection:
-#     prime_graphs: List[Graph]
-#     cograph_contration_tree: List[tuple] # TODO: change decode function in
+@dataclass
+class Prime:
+    graph: Graph
+    tree_level: int
+@dataclass
+class PrimeGraphCollection:
+    prime_set: List[Prime]
+    cograph_contration_tree: List[tuple] ## TODO: change decode function in
