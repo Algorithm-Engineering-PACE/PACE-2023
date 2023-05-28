@@ -847,8 +847,8 @@ def preproccess(graph_):
             if len(prime_g_set) == 0:
                 #is cograph
                 cograph_contraction_tree = create_contraction_tree_for_cograph(md_tree)
-                for p,c in cograph_contraction_tree:
-                    print(f"{p} {c}",flush=True)
+                # for p,c in cograph_contraction_tree:
+                #     print(f"{p} {c}",flush=True)
     except Exception as ex:
         logger.debug("preproccess exception - handling by returning original graph", exc_info=ex)
         pass
