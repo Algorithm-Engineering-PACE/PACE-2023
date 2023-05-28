@@ -15,6 +15,7 @@ import twin_width.heuristic as heuristic
 import twin_width.parser as parser
 import preprocessing
 import tools
+from utils import print_contraction_tree_from_input, process_graph, print_contraction_tree
 from logger import logger
 
 
@@ -51,46 +52,9 @@ def process_graph_from_instance(file_name: Path):
     process_file(BASE_PATH, file_name)
 
 @app.command()
-def proccess_graph_from_input():
+def proccess_graph_from_stdin():
     g = parser.parse_stdin()
-    result = process_graph(g.copy())
-    print_contraction_tree(result,g.number_of_nodes())
-
-
-def print_contraction_tree(result,num_of_nodes_orginal_graph,print_to_file = False, file_path = None):
-    parents = result.get("contraction_tree")
-    ordering = result.get("elimination_ordering")
-    symetric_diff = set(i for i in range(1,num_of_nodes_orginal_graph + 1)).symmetric_difference(set(ordering))
-    lines = []
-    if parents:
-        if len(parents) == int(num_of_nodes_orginal_graph) - 1:
-            if result.get("tww") > 0:
-            ## child is contracted to parnet
-                if symetric_diff:
-                    for child in symetric_diff:
-                        line = f"{parents[child]} {child}"
-                        print(line, flush=True)
-                        lines.append(str(line)+"\n")
-
-                for child in ordering[:-1]:
-                    line = f"{parents[child]} {child}"
-                    print(line, flush=True)
-                    lines.append(str(line)+"\n")
-            else:
-                for parent,child in dict(parents).items():
-                    line = f"{child} {parent}"
-                    print(line, flush=True)
-                    lines.append(str(line)+"\n")
-
-            if print_to_file and file_path:
-                with open(file_path, 'w') as file:
-                    file.writelines(lines)
-
-
-        else:
-            raise Exception("contraction tree is not valid - number of contraction != num_of_nodes - 1")
-    else:
-        raise Exception("result is not valid")
+    print_contraction_tree_from_input(g.copy())
 
 
 def process_file(instance_path: Path, file_name: str ,
@@ -177,7 +141,9 @@ def process_file(instance_path: Path, file_name: str ,
         df.to_csv(results_file_name)
     if save_pace_output:
         pace_output_file_name =  (BASE_PATH / (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
-        print_contraction_tree(result,g.number_of_nodes(),True,pace_output_file_name)
+        print_contraction_tree(result["contraction_tree"],
+            result["elimination_ordering"],
+            result["tww"], g.number_of_nodes(),True,pace_output_file_name)
     return result
 
 def delete_files_starting_with(prefix):
@@ -197,43 +163,6 @@ def delete_files_starting_with(prefix):
                 logger.debug(f"Deleted: {file_path}")
             else:
                 logger.debug(f"Skipping non-file: {file_path}")
-
-def process_graph(graph : graph ,instance_name = None,save_result_to_csv = False):
-    ## our preprocessing
-    res = preprocessing.preproccess(graph)
-    g = res['output_graph']
-    contraction_tree = res['contraction_tree'] if res['contraction_tree'] else {}
-    if res["is_cograph"]:
-        logger.debug("Done, width: 0")
-        return ({"instance_name": instance_name
-                        ,"num_of_nodes": graph.number_of_nodes()
-                        ,"num_of_edges": graph.number_of_edges()
-                        ,"tww": 0
-                        ,"elimination_ordering": list(contraction_tree.keys())
-                        ,"contraction_tree": contraction_tree
-                        ,"cycle_times": None
-                        ,"duration": None
-                                })
-    ub = heuristic.get_ub(g)
-    ub2 = heuristic.get_ub2(g)
-    logger.debug(f"UB {ub} {ub2}")
-    ub = min(ub, ub2)
-
-    start = time.time()
-    enc = encoding.TwinWidthEncoding()
-    cb, od, mg, times = enc.run(g, slv.Cadical103, ub)
-    contraction_tree.update(mg)
-    duration = time.time() - start
-    logger.debug(f"Finished, result: {cb}")
-    return({"instance_name": instance_name
-                    ,"num_of_nodes": g.number_of_nodes()
-                    ,"num_of_edges": g.number_of_edges()
-                    ,"tww": cb
-                    ,"elimination_ordering": od
-                    ,"contraction_tree": contraction_tree
-                    ,"cycle_times": times
-                    ,"duration": duration
-                            })
 
 
 

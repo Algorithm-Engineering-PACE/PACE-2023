@@ -840,20 +840,18 @@ def create_contraction_tree(node,contraction_tree):
 
 def preproccess(graph_):
     graph = copy.deepcopy(graph_)
-    res = {}
-    res['output_graph'] = graph
-    res['contraction_tree'], res['is_cograph'] = {}, False
+    output_graph = graph
+    contraction_tree, is_cograph = {}, False
     try:
         md_tree = habib_maurer_algorithm(graph)
         if not is_prime(md_tree,graph):
             output_graph = create_graph_from_prime_g(md_tree,graph)
-            contraction_tree = {}
             create_contraction_tree(copy.deepcopy(md_tree),contraction_tree)
-            res['output_graph'] = output_graph
-            res['contraction_tree'] = contraction_tree
-            res['is_cograph'] = 1 if output_graph.number_of_nodes() == 0 else 0
+            output_graph = output_graph
+            contraction_tree = contraction_tree
+            is_cograph = 1 if output_graph.number_of_nodes() == 0 else 0
     except Exception as ex:
         logger.debug("preproccess exception - handling by returning original graph",exc_info=ex)
         pass
     finally:
-        return res
+        return output_graph, contraction_tree, is_cograph
