@@ -1,4 +1,5 @@
 import time
+
 from typing import List, Dict, Optional
 
 from networkx import Graph
@@ -285,6 +286,61 @@ class MyTwinWidthEncoding:
                 for k in range(1, j):
                     self.formula.append([-self.left_child[i][j], -self.right_child[i][k]])
 
+    def encode_symm_diff(self, g, d):
+        self.combined = [
+            [{} for _ in range(0, self.num_total_vertices + 1)]
+            for _ in range(0, self.num_total_vertices + 1)
+        ]
+
+        for i in range(self._parent_start_index, self.num_total_vertices + 1):
+            for j in range(1, self.num_original_vertices+1):
+                for k in range(1, j):
+                    self.combined[i][k][j] = self.pool.id(
+                        f"combined_{i}_{k}_{j}"
+                    )
+
+        # start encoding combined_i_j_k
+        s = self._parent_start_index
+        # first encode when i is the first non-original vertex
+
+        for j in range(1, self.num_original_vertices + 1):
+            for k in range(1, j):
+                # self.combined[s][k][j] equivalent to
+                # self.left_child[s][k] and self.right_child[s][j]
+                # we are assuming left right symmetry breaking is active
+                self.formula.append([-self.combined[s][k][j], self.left_child[s][k]])
+                self.formula.append([-self.combined[s][k][j], self.right_child[s][j]])
+                self.formula.append([-self.left_child[s][k], -self.right_child[s][j], self.combined[s][k][j]])
+
+        # now encode it for the remaining non-original vertices
+        # the two vertices merging into i gets combined
+        # and also the ones that are combined in i-1 remain combined
+        for i in range(s + 1, self.num_total_vertices + 1):
+            for j in range(1, self.num_original_vertices + 1):
+                for k in range(1, j):
+                    # self.combined[i][k][j] equivalent to self.combined[i-1][k][j] or
+                    # (self.left_child[i][k] and self.right_child[i][j])
+                    self.formula.append([-self.combined[i][k][j], self.combined[i-1][k][j], self.left_child[i][k]])
+                    self.formula.append([-self.combined[i][k][j], self.combined[i-1][k][j], self.right_child[i][j]])
+                    self.formula.append([-self.left_child[i][k], -self.right_child[i][j], self.combined[i][k][j]])
+                    self.formula.append([-self.combined[i-1][k][j], self.combined[i][k][j]])
+
+        # adding clauses for symmetric diff
+        for i in range(1, self.num_original_vertices+1):
+            for j in range(1, i+1):
+                nbrs_i = set(g.neighbors(i))
+                nbrs_j = set(g.neighbors(j))
+                symm_diff = nbrs_i.symmetric_difference(nbrs_j)
+                for k in range(self._parent_start_index, self.num_total_vertices+1):
+                    var_list = [-self.vanished[k][p] for p in symm_diff]
+                    card_cnf= CardEnc.atmost(
+                         var_list, vpool=self.pool, bound=d, encoding=self.card_enc
+                    )
+                    appended_card_cnf= [(x + [-self.combined[k][j][i]]) for x in card_cnf] 
+                    self.formula.extend(appended_card_cnf)
+
+
+
     def encode(self, g, d):
         self.update_num_vertices(g, d)
         g = self.remap_graph(g)
@@ -301,6 +357,7 @@ class MyTwinWidthEncoding:
         self.encode_red_unvanished()
         self.encode_counters(d)
         self.encode_break_symmetry()
+        self.encode_symm_diff(g, d)
         print(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
 
