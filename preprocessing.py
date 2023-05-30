@@ -3,7 +3,6 @@ import networkx as nx
 import copy
 import tools
 from logger import logger
-from utils import PrimeGraphCollection,Prime
 
 ## sagemath implementation for graph modular decomposition
 
@@ -770,7 +769,6 @@ def quotient_graph(root, g):
     quotient_g = g.subgraph(vertices)
     return quotient_g
 
-
 def get_module_supgraph(root,graph):
     module_vertices = get_vertices(root)
     return graph.subgraph(module_vertices)
@@ -795,13 +793,11 @@ def prime_g_helper(root, graph, prime_g_set, index):
                 g_m = graph.subgraph(module_vertices)
                 prime_g_helper(maximal_module, g_m, prime_g_set, index)
 
-
 def prime_g(root, graph):
     prime_g_set = []
     index = 0
     prime_g_helper(root, graph, prime_g_set, index)
     return prime_g_set
-
 
 def create_graph_from_prime_g(md_tree, graph):
     prime_g_set = prime_g(md_tree, graph)
@@ -837,22 +833,15 @@ def create_contraction_tree_for_cograph_helper(node, contraction_tree):
 
 
 def preproccess(graph_):
-    graph = copy.deepcopy(graph_)
-    prime_g_set = [Prime(graph,0)]
-    cograph_contraction_tree = []
+    graph = graph_.copy()
+    md_tree,is_prime_ = None,True
     try:
         md_tree = habib_maurer_algorithm(graph)
-        if not is_prime(md_tree, graph):
-            prime_g_set = prime_g(md_tree, graph)
-            if len(prime_g_set) == 0:
-                #is cograph
-                cograph_contraction_tree = create_contraction_tree_for_cograph(md_tree)
-                # for p,c in cograph_contraction_tree:
-                #     print(f"{p} {c}",flush=True)
+        is_prime_ = is_prime(md_tree, graph)
     except Exception as ex:
         logger.debug("preproccess exception - handling by returning original graph", exc_info=ex)
         pass
     finally:
-        return PrimeGraphCollection(prime_g_set,cograph_contraction_tree)
+        return md_tree,is_prime_
 
 

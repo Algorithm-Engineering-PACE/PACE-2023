@@ -13,7 +13,6 @@ import twin_width.encoding as encoding
 import twin_width.encoding_signed_bipartite as encoding_signed_bipartite
 import twin_width.heuristic as heuristic
 import twin_width.parser as parser
-import preprocessing
 import tools
 from utils import print_contraction_tree_from_input, process_graph, print_contraction_tree
 from logger import logger
@@ -141,9 +140,7 @@ def process_file(instance_path: Path, file_name: str ,
         df.to_csv(results_file_name)
     if save_pace_output:
         pace_output_file_name =  (BASE_PATH / (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
-        print_contraction_tree(result["contraction_tree"],
-            result["elimination_ordering"],
-            result["tww"], g.number_of_nodes(),True,pace_output_file_name)
+        print_contraction_tree(result["contraction_tree"], g.number_of_nodes(),True,pace_output_file_name)
     return result
 
 def delete_files_starting_with(prefix):
