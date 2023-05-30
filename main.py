@@ -31,7 +31,6 @@ def clean_results():
 
 @app.command()
 def process_graphs_from_dir(instance_path: Path, start: int =0, to: int=-1):
-
     instance_path = (BASE_PATH / instance_path).resolve()
     if not os.path.exists(instance_path):
         logger.error(f"folder is not exists {instance_path}")
@@ -53,8 +52,7 @@ def process_graph_from_instance(file_name: Path):
 
 @app.command()
 def proccess_graph_from_stdin():
-    g = parser.parse_stdin()
-    print_contraction_tree_from_input(g.copy())
+    print_contraction_tree_from_input()
 
 
 def process_file(instance_path: Path, file_name: str ,
@@ -73,10 +71,10 @@ def process_file(instance_path: Path, file_name: str ,
         start = time.time()
 
         enc = encoding_signed_bipartite.TwinWidthEncoding()
-        cb = enc.run(g, slv.Cadical103, ub)
+        cb = enc.run(g, slv.Cadical, ub)
     else:
         g = parser.parse(instance_file_name)[0]
-        result = process_graph(g,file_name)
+        result = process_graph(g, instance_file_name)
     if output_graphs:
             instance_name = os.path.split(instance_file_name)[-1]
             mg = cb[2]
@@ -141,9 +139,7 @@ def process_file(instance_path: Path, file_name: str ,
         df.to_csv(results_file_name)
     if save_pace_output:
         pace_output_file_name =  (BASE_PATH / (str(file_name).split(".")[0]+"_pace_output.gr")).resolve().as_posix()
-        print_contraction_tree(result["contraction_tree"],
-            result["elimination_ordering"],
-            result["tww"], g.number_of_nodes(),True,pace_output_file_name)
+        print_contraction_tree(result["contraction_tree"], g.number_of_nodes())
     return result
 
 def delete_files_starting_with(prefix):

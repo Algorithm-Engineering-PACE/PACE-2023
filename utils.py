@@ -1,14 +1,17 @@
 import sys
-from attr import dataclass
+from dataclasses import dataclass
+from pathlib import Path
 
 import networkx as nx
 from networkx import Graph
-from typing import List
+from typing import List, Optional
 import pysat.solvers as slv
 
 import preprocessing
 import twin_width.heuristic as heuristic
 import twin_width.encoding as encoding
+from twin_width.encoding_adapter import run_graph_collection
+from pace_verifier import check_sequence, read_graph, read_sequence
 
 def parse_stdin():
     g = nx.Graph()
@@ -33,78 +36,36 @@ def parse_stdin():
     return g
 
 
-def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = False) -> dict:
+def process_graph(graph : Graph, graph_path: Optional[Path] = None) -> dict:
     ## our preprocessing
     res = preprocessing.preproccess(graph)
+    contraction_seq = run_graph_collection(res, graph)
+    d = None
+    if graph_path:
+        pace_g = read_graph(graph_path)
+        d = check_sequence(pace_g, contraction_seq)
 
-    g, contraction_tree, is_cograph = None,None,None 
-    if is_cograph:
-        return {"instance_name": instance_name
-                        ,"num_of_nodes": graph.number_of_nodes()
-                        ,"num_of_edges": graph.number_of_edges()
-                        ,"tww": 0
-                        ,"elimination_ordering": set()
-                        ,"contraction_tree": contraction_tree
-                        ,"cycle_times": None
-                        ,"duration": None
-                                }
-    ub = heuristic.get_ub(g)
-    ub2 = heuristic.get_ub2(g)
-    ub = min(ub, ub2)
-
-    enc = encoding.TwinWidthEncoding()
-    cb, od, mg, times = enc.run(g, slv.Cadical, ub)
-    contraction_tree.update(mg)
 
     return  {
-        "instance_name": instance_name
-        ,"num_of_nodes": g.number_of_nodes()
-        ,"num_of_edges": g.number_of_edges()
-        ,"tww": cb
-        ,"elimination_ordering": od
-        ,"contraction_tree": contraction_tree
-        ,"cycle_times": times
+        "instance_path": graph_path
+        ,"num_of_nodes": graph.number_of_nodes()
+        ,"num_of_edges": graph.number_of_edges()
+        ,"tww": d
+        ,"contraction_tree": contraction_seq
     }
 
 
 def print_contraction_tree_from_input():
     g = parse_stdin()
     result = process_graph(g.copy())
-    print_contraction_tree(result["contraction_tree"],
-        result["elimination_ordering"],
-        result["tww"], g.number_of_nodes())
+    print_contraction_tree(result["contraction_tree"], g.number_of_nodes())
 
-def print_contraction_tree(parents: dict, ordering: list, tww: int , num_of_nodes_orginal_graph, print_to_file = False, file_path = None):
-    symetric_diff = set(i for i in range(1,num_of_nodes_orginal_graph + 1)).symmetric_difference(set(ordering))
-    lines = []
-    if parents:
-        if len(parents) == int(num_of_nodes_orginal_graph) - 1:
-            if tww > 0:
-            ## child is contracted to parnet
-                if symetric_diff:
-                    for child in symetric_diff:
-                        line = f"{parents[child]} {child}"
-                        print(line, flush=True)
-                        lines.append(str(line)+"\n")
-
-                for child in ordering[:-1]:
-                    line = f"{parents[child]} {child}"
-                    print(line, flush=True)
-                    lines.append(str(line)+"\n")
-            else:
-                for parent,child in dict(parents).items():
-                    line = f"{child} {parent}"
-                    print(line, flush=True)
-                    lines.append(str(line)+"\n")
-
-            if print_to_file and file_path:
-                with open(file_path, 'w') as file:
-                    file.writelines(lines)
-
-        else:
-            raise Exception("contraction tree is not valid - number of contraction != num_of_nodes - 1")
+def print_contraction_tree(contraction_sequance, num_of_nodes_orginal_graph):
+    if len(contraction_sequance) == int(num_of_nodes_orginal_graph) - 1:
+        for p,v in contraction_sequance:
+            print(f"{p} {v}")
     else:
-        raise Exception("result is not valid")
+        raise Exception("contraction tree is not valid - number of contraction != num_of_nodes - 1")
 
 @dataclass
 class Prime:
@@ -113,4 +74,7 @@ class Prime:
 @dataclass
 class PrimeGraphCollection:
     prime_set: List[Prime]
-    cograph_contration_tree: List[tuple] ## TODO: change decode function in
+    cograph_contration_tree: List[tuple]
+
+    def sort_by_tree_level(self):
+            self.prime_set.sort(key=lambda prime: prime.tree_level, reverse=True)
