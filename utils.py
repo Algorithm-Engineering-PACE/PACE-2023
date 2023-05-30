@@ -49,7 +49,8 @@ def solve_md_tree(md_tree, g):
         assert len(cur_g.nodes)>3
         cb, contraction_tree, times = run_solver(cur_g)
         cur_contr_seq.extend(contraction_tree)
-        return (cur_contr_seq, root_node) # root_id
+        cur_root_node = cur_contr_seq[-1][0]
+        return (cur_contr_seq, cur_root_node) # root_id
     if (md_tree.node_type == NodeType.PARALLEL or md_tree.node_type == NodeType.SERIES):
         for i in range(1,len(subg)):
             cur_contr_seq.append((subg[0], subg[i]))
