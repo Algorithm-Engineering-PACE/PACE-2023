@@ -21,8 +21,8 @@ def get_ub(g):
                 if c_len < c_min[0]:
                     c_min = (c_len, (u, v))
 
-        n = c_min[1][0]
-        t = c_min[1][1]
+        n = c_min[1][1]
+        t = c_min[1][0]
 
         tn = set(g.neighbors(t))
         tn.discard(n)
@@ -51,10 +51,12 @@ def get_ub(g):
                     cc += 1
             c_max = max(c_max, cc)
 
-    return c_max
+    return c_max, mg
 
 
 def get_ub2(g):
+    if len(g.nodes) <= 2:
+        return 0
     additional_reds = {}
     for n1 in g.nodes:
         if n1 not in additional_reds:

@@ -124,14 +124,21 @@ class TwinWidthEncoding:
         if is_connected(g):
             return self.run_instance(g, solver, start_bound, verbose, check, lb)
         else:
-            return max([self.run_instance(subgraph(g, c),
+            return self.merge_all([self.run_instance(subgraph(g, c),
                                 solver, min(heuristic.get_ub(subgraph(g, c)), heuristic.get_ub2(subgraph(g, c))),
-                                verbose, check, lb) for c in connected_components(g)], key=itemgetter(0))
+                                verbose, check, lb) for c in connected_components(g)])
+
+    def merge_all(self, tuples_list):
+        tww = max([t[0] for t in tuples_list])
+        od = [item for t in tuples_list for item in t[1]]
+        mg = {k: v for t in tuples_list for k, v in t[2].items()}
+        times = [item for t in tuples_list for item in t[3]]
+
+        return merged_int, merged_list_1, merged_dict, merged_list_2
 
     def run_instance(self, g, solver, start_bound, verbose=True, check=True, lb=1):
         if len(g.nodes) == 1: #  Preprocessing should handle this case
-            logger.debug("Done, width: 0")
-            return 0, None, None, time.time() - time.time()
+            raise Exception("encoding can't contract a single node graph")
 
         times = {}
         start = time.time()
