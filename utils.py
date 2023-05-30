@@ -1,6 +1,7 @@
 import sys
 
-import networkx as nx, Graph
+from networkx import Graph
+
 from typing import List
 import pysat.solvers as slv
 
@@ -9,7 +10,7 @@ import twin_width.heuristic as heuristic
 import twin_width.encoding as encoding
 
 def parse_stdin():
-    g = nx.Graph()
+    g = Graph()
     # Read input from stdin
     for index,line in enumerate(sys.stdin):
         try:
