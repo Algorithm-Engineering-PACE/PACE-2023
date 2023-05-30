@@ -1,12 +1,10 @@
 import sys
-from attr import dataclass
 
-import networkx as nx
-from networkx import Graph
+import networkx as nx, Graph
 from typing import List
 import pysat.solvers as slv
 
-from preprocessing import preproccess,NodeType
+from preprocessing import preproccess, NodeType
 import twin_width.heuristic as heuristic
 import twin_width.encoding as encoding
 
@@ -50,7 +48,7 @@ def solve_md_tree(md_tree, g):
         cb, od, ct, times = run_solver(cur_g)
         contraction_tree = create_sequence_from_dict(ct,od)
         cur_contr_seq.extend(contraction_tree)
-        return (cur_contr_seq, root_node) # root_id 
+        return (cur_contr_seq, root_node) # root_id
     if (md_tree.node_type == NodeType.PARALLEL or md_tree.node_type == NodeType.SERIES):
         for i in range(1,len(subg)):
             cur_contr_seq.append((subg[0], subg[i]))
@@ -71,7 +69,7 @@ def create_sequence_from_dict(parents: dict, ordering: list):
     for child in ordering[:-1]:
         contraction_tree.append((parents[child],child))
     return contraction_tree
-    
+
 def print_contraction_tree(contraction_tree,g_num_of_nodes, print_to_file = False, file_path = None):
     lines = []
     if len(contraction_tree) == g_num_of_nodes - 1:
@@ -84,8 +82,8 @@ def print_contraction_tree(contraction_tree,g_num_of_nodes, print_to_file = Fals
                 file.writelines(lines)
     else:
            raise Exception("c - contraction tree is not valid - number of contraction != num_of_nodes - 1")
-        
-        
+
+
 
 def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = False) -> dict:
     ## our preprocessing
@@ -94,7 +92,7 @@ def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = Fals
     if is_prime_graph:
         cb, od, cs, times = run_solver(graph)
         contraction_tree = create_sequence_from_dict(cs,od)
- 
+
     else:
         contraction_tree,root = solve_md_tree(md_tree,graph)
     return  {
@@ -113,4 +111,3 @@ def print_contraction_tree_from_input():
     result = process_graph(g.copy())
     contraction_tree = result["contraction_tree"]
     print_contraction_tree(contraction_tree,g.number_of_nodes())
-   
