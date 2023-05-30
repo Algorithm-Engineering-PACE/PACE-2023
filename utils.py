@@ -7,7 +7,8 @@ import pysat.solvers as slv
 
 from preprocessing import preproccess, NodeType
 import twin_width.heuristic as heuristic
-import twin_width.encoding as encoding
+#import twin_width.encoding as encoding
+import twin_width.my_encoding as encoding
 
 def parse_stdin():
     g = Graph()
@@ -46,8 +47,7 @@ def solve_md_tree(md_tree, g):
     if (md_tree.node_type == NodeType.PRIME):
         cur_g = g.subgraph(subg)
         assert len(cur_g.nodes)>3
-        cb, od, ct, times = run_solver(cur_g)
-        contraction_tree = create_sequence_from_dict(ct,od)
+        cb, contraction_tree, times = run_solver(cur_g)
         cur_contr_seq.extend(contraction_tree)
         return (cur_contr_seq, root_node) # root_id
     if (md_tree.node_type == NodeType.PARALLEL or md_tree.node_type == NodeType.SERIES):
@@ -60,9 +60,10 @@ def run_solver(g):
     ub2 = heuristic.get_ub2(g)
     ub = min(ub, ub2)
 
-    enc = encoding.TwinWidthEncoding()
-    cb, od, mg, times = enc.run(g, slv.Cadical103, ub)
-    return cb, od, mg, times
+    # enc = encoding.TwinWidthEncoding()
+    enc = encoding.MyTwinWidthEncoding()
+    cb, con_seq, times = enc.run(g, slv.Cadical103, ub)
+    return cb, con_seq, times
 
 
 def create_sequence_from_dict(parents: dict, ordering: list):
@@ -91,9 +92,7 @@ def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = Fals
     cb,od,times = None,None,None
     md_tree, is_prime_graph = preproccess(graph)
     if is_prime_graph:
-        cb, od, cs, times = run_solver(graph)
-        contraction_tree = create_sequence_from_dict(cs,od)
-
+        cb, contraction_tree, times = run_solver(graph)
     else:
         contraction_tree,root = solve_md_tree(md_tree,graph)
     return  {
@@ -101,7 +100,7 @@ def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = Fals
         ,"num_of_nodes": graph.number_of_nodes()
         ,"num_of_edges": graph.number_of_edges()
         ,"tww": cb
-        ,"elimination_ordering": od
+        ,"elimination_ordering": None
         ,"contraction_tree": contraction_tree
         ,"cycle_times": times
     }
