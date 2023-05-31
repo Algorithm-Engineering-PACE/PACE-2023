@@ -94,7 +94,7 @@ def print_contraction_tree(contraction_tree,g_num_of_nodes, print_to_file = Fals
 
 def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = False) -> dict:
     ## our preprocessing
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.ERROR)
     cb,od,times = None,None,None
     md_tree, is_prime_graph = preproccess(graph)
     logging.debug(f"md_tree: {md_tree}")

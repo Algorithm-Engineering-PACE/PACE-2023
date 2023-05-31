@@ -310,10 +310,10 @@ class MyTwinWidthEncoding:
         self.encode_red_unvanished()
         self.encode_counters(d)
         self.encode_break_symmetry()
-        print(f"{len(self.formula.clauses)} / {self.formula.nv}")
+        #print(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
 
-    def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
+    def run(self, g, solver, start_bound, verbose=False, check=True, timeout=0):
             start = time.time()
             cb = start_bound
             elim_order = None
