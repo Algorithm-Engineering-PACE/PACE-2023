@@ -15,7 +15,7 @@ import twin_width.heuristic as heuristic
 import twin_width.parser as parser
 import tools
 from utils import print_contraction_tree_from_input, process_graph, print_contraction_tree
-from logger import logger
+from logger import logger,logging
 
 
 from networkx import graph
@@ -52,7 +52,9 @@ def process_graph_from_instance(file_name: Path):
 
 @app.command()
 def proccess_graph_from_stdin():
+    logging.basicConfig(level=logging.DEBUG)
     g = parser.parse_stdin()
+    logging.debug(g)
     print_contraction_tree_from_input(g.copy())
 
 
