@@ -112,3 +112,8 @@ def print_contraction_tree_from_input():
     result = process_graph(g.copy())
     contraction_tree = result["contraction_tree"]
     print_contraction_tree(contraction_tree,g.number_of_nodes())
+
+
+def get_contraction_tree_from_graph(g):
+    result = process_graph(g.copy())
+    return result["contraction_tree"]
