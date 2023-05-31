@@ -2,7 +2,7 @@
 twin-width
 ## running
 ```
-Process graph from stdin(PACE 2023) - cat <file_name> | python3 solution.py
+Process graph from stdin(PACE 2023) - cat <file_name> | python3 submission_main
 Process graph from instance -  python3 solution.py "process-graph-from-instance" <file_name>
 Process graph from directory - python3 solution.py "process-graphs-from-dir" <dict_name>
 Clean results - python3 solution.py "clean-results"
