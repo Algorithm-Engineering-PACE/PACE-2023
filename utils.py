@@ -113,7 +113,8 @@ def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = Fals
     }
 
 
-def print_contraction_tree_from_input(g):
+def print_contraction_tree_from_input():
+    g = parse_stdin()
     result = process_graph(g.copy())
     contraction_tree = result["contraction_tree"]
     print_contraction_tree(contraction_tree,g.number_of_nodes())

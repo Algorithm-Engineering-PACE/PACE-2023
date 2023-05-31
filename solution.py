@@ -32,6 +32,6 @@ if __name__=='__main__':
             file_name = sys.argv[2]
             command = ['python3', 'main.py', api_command,file_name]
     else:
-        command = ['python3', 'main.py', 'proccess-graph-from-stdin']
+        command = ['python3', 'main.py', 'proccess-graph-from-input']
     main(command)
     

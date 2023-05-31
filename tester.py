@@ -34,9 +34,9 @@ def hello():
 
 
 @app.command()
-def random_tester(reps, v):
+def random_tester(reps):
     n = int(reps)
-    num_vertices = int(v)
+    num_vertices = 20
     prob = 0.5
     file_name = 'random.gr'
     for i in range(n):

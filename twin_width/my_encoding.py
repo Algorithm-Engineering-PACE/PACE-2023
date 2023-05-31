@@ -6,7 +6,6 @@ from pysat.card import CardEnc, EncType
 from pysat.formula import CNF, IDPool, CNFPlus
 from threading import Timer
 import twin_width.formula_ops as fops
-from logger import logging
 
 
 class MyTwinWidthEncoding:
@@ -311,11 +310,10 @@ class MyTwinWidthEncoding:
         self.encode_red_unvanished()
         self.encode_counters(d)
         self.encode_break_symmetry()
-        logging.debug(f"{len(self.formula.clauses)} / {self.formula.nv}")
+        print(f"{len(self.formula.clauses)} / {self.formula.nv}")
         return self.formula
 
-    def run(self, g, solver, start_bound, verbose=False, check=True, timeout=0):
-            #logging.basicConfig(level=logging.DEBUG)
+    def run(self, g, solver, start_bound, verbose=True, check=True, timeout=0):
             start = time.time()
             cb = start_bound
             elim_order = None
@@ -363,7 +361,6 @@ class MyTwinWidthEncoding:
                 timer.cancel()
             if cb == 0:  # note that twin-width 0 case is taken care of seperately in main
                 cb = 1
-            logging.debug(f"elim_order before remapping: {elim_order}")
             return cb, self.remap_elim_order(elim_order), time.time() - start
 
     def elim_order(self, model, d):
