@@ -9,6 +9,7 @@ from preprocessing import preproccess, NodeType
 import twin_width.heuristic as heuristic
 #import twin_width.encoding as encoding
 import twin_width.my_encoding as encoding
+from logger import logging
 
 def parse_stdin():
     g = Graph()
@@ -44,10 +45,13 @@ def solve_md_tree(md_tree, g):
     for (contr_seq, root_node) in output_list:
             cur_contr_seq += contr_seq
             subg.append(root_node)
+    logging.debug(f"subgraph in solve_md_tree: {g.subgraph(subg)}")
+    logging.debug(f"list of vertices in subgraph : {subg}")
     if (md_tree.node_type == NodeType.PRIME):
         cur_g = g.subgraph(subg)
         assert len(cur_g.nodes)>3
         cb, contraction_tree, times = run_solver(cur_g)
+        logging.debug(f"contraction_tree from sat solver: {contraction_tree}")
         cur_contr_seq.extend(contraction_tree)
         cur_root_node = cur_contr_seq[-1][0]
         return (cur_contr_seq, cur_root_node) # root_id
@@ -90,8 +94,10 @@ def print_contraction_tree(contraction_tree,g_num_of_nodes, print_to_file = Fals
 
 def process_graph(graph : Graph ,instance_name = None, save_result_to_csv = False) -> dict:
     ## our preprocessing
+    logging.basicConfig(level=logging.DEBUG)
     cb,od,times = None,None,None
     md_tree, is_prime_graph = preproccess(graph)
+    logging.debug(f"md_tree: {md_tree}")
     if is_prime_graph:
         cb, contraction_tree, times = run_solver(graph)
     else:

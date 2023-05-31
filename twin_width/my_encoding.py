@@ -13,6 +13,7 @@ class MyTwinWidthEncoding:
         self.edge: Optional[List[Dict[int, int]]] = None
         self.merge: Optional[Dict] = None
         self.node_map: Optional[Dict] = None
+        self.inverse_map: Optional[List] = None
         self.pool: Optional[IDPool] = None
         self.formula: Optional[CNF] = None
         self.totalizer: Optional[EncType] = None
@@ -30,20 +31,28 @@ class MyTwinWidthEncoding:
 
     def remap_graph(self, g):
         self.node_map = {}
+        self.inverse_map =[0]*(len(g.nodes)+2)
         cnt = 1
         gn = Graph()
 
         for u, v in g.edges():
             if u not in self.node_map:
                 self.node_map[u] = cnt
+                self.inverse_map[cnt]=u
                 cnt += 1
             if v not in self.node_map:
                 self.node_map[v] = cnt
+                self.inverse_map[cnt]=v
                 cnt += 1
 
             gn.add_edge(self.node_map[u], self.node_map[v])
 
         return gn
+
+    def remap_elim_order(self, elim_order):
+        mapped_elim_order = [(self.inverse_map[a], self.inverse_map[b])
+                             for a, b in elim_order]
+        return mapped_elim_order
 
     def init_var(self, g, d):
         self.edge = [{} for _ in range(0, self.num_total_vertices + 1)]
@@ -352,7 +361,7 @@ class MyTwinWidthEncoding:
                 timer.cancel()
             if cb == 0:  # note that twin-width 0 case is taken care of seperately in main
                 cb = 1
-            return cb, elim_order, time.time() - start
+            return cb, self.remap_elim_order(elim_order), time.time() - start
 
     def elim_order(self, model, d):
         model = {abs(x): x > 0 for x in model}
