@@ -52,7 +52,7 @@ def process_graph_from_instance(file_name: Path):
 
 @app.command()
 def proccess_graph_from_stdin():
-    #logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     g = parser.parse_stdin()
     logging.debug(g)
     print_contraction_tree_from_input(g.copy())
