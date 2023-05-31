@@ -62,7 +62,7 @@ def run_solver(g):
     ub = min(ub, ub2)
 
     # enc = encoding.TwinWidthEncoding()
-    enc = encoding.MyTwinWidthEncoding()
+    enc = encoding.MyTwinWidthEncoding(g, ub)
     cb, con_seq, times = enc.run(g, slv.Cadical103, ub)
     return cb, con_seq, times
 
